@@ -1,0 +1,168 @@
+\documentclass[[12pt,a4paper,twoside,openrigh]{article} 
+
+\usepackage{indentfirst}
+\usepackage{makeidx}
+\usepackage{pdfpages}
+\usepackage[italian]{babel}
+\usepackage[latin1]{inputenc}
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{stmaryrd}
+\usepackage{amsfonts}
+\usepackage{mathtools}
+\usepackage{xspace}
+\usepackage{infer}
+\usepackage{float}
+\usepackage[all]{xy}
+\usepackage{array}
+\usepackage{version}
+\usepackage{verbatim} 
+\usepackage{balance}
+\usepackage{enumerate}
+\usepackage{fullpage}
+\usepackage{pifont}
+\usepackage[textsize=footnotesize,backgroundcolor=white,linecolor=black]{todonotes}
+\usepackage{xifthen}
+
+\floatstyle{ruled}
+\restylefloat{table}
+
+\newtheorem{definition}{Definition}
+\newtheorem{lemma}{Lemma}
+\newtheorem{theorem}{Theorem}
+\newtheorem{proposition}{Proposition}
+
+\newcommand{\vat}[0]{\hat{v}}
+
+\newcommand{\scell}[2][c]{%
+  \begin{tabular}[#1]{@{}c@{}}#2\end{tabular}}
+\newcommand{\modelrho}{\models_{\rho_s}}
+\newcommand{\letexprs}[3]{\mathbf{let}\ \vec{#1 = #2}\ \mathbf{in}\ #3}
+\newcommand{\caesti}[2]{C \modelrho #1 : \vat_{#2} \gg \rho_{#2}}
+\newcommand{\caest}[1]{C \modelrho #1 : \vat \gg \rho}
+
+\author{Michele Bugliesi \and Stefano Calzavara \and Silvia Crafa \and Enrico Steffinlongo}
+\title{Static Enforcement of Least Privilege in Google Chrome Extensions}
+
+\input{macros}
+
+\makeindex
+\begin{document}
+\maketitle
+\tableofcontents
+
+\section{Security Rules}
+
+\begin{tabular}{l l l}
+{[\textit{PE-Val}]} \\
+$C \modelrho c : \vat$ & iff & $\{d_c\} \subseteq \vat$ \\ 
+{[\textit{PE-Var}]} \\
+$C \modelrho x : \vat$ & iff & $R(x) \subseteq \vat$ \\ 
+{[\textit{PE-Lambda}]} \\
+$C \modelrho \lam{x}{e} : \vat$ & iff & $\{\lam{x}{e}\} \subseteq \vat$ \\
+{[\textit{PE-Obj}]} \\
+$\caest {\rec{\vec{str_i : e_i}}}$ & iff & $\forall i: \caesti {e_i} {i} \wedge$\\
+&& $\rec{\vec{str_i :\vat_i}} \subseteq \vat \wedge$ \\
+&& $\bigsqcup_{i} \rho_i \sqsubseteq \rho$ \\ 
+{[\textit{PE-Let}]} \\
+$\caest {\letexprs{x_i}{e_i}{e'}}$ & iff & $C \modelrho e' : \vat \gg \rho' \wedge$ \\
+&& $ \forall i: \caesti {e_i} {i} \wedge$ \\
+&& $\vat_i \subseteq R(x_i) \wedge$ \\
+&& $ \{\rho'\} \join \{\bigsqcup_i \rho_i\} \sqsubseteq \rho$ \\
+{[\textit{PE-App}]} \\
+$\caest {\appl {e_1} {e_2}}$ & iff & $ \caesti {e_1} {1} \wedge$ \\
+&& $\caesti {e_2} {2} \wedge$ \\
+&& $\rho_1 \sqsubseteq \rho \wedge$ \\
+&& $\rho_2 \sqsubseteq \rho \wedge$ \\
+&& $\forall (\lam{x}{e_0}) \in \vat_1 : \vat_2 \subseteq R(x) \wedge \caesti {e_0} {0} \wedge \rho_0 \sqsubseteq \rho $\\
+{[\textit{PE-Op}]} \\
+$\caest {\op (\vec{e_i})} $& iff &$\forall i : \caesti {e_i} {i} \wedge $\\
+&& $\rho_i \sqsubseteq \rho$\\
+&& $\widehat{op} (\vec{\vat_i}) \subseteq \vat $\\
+{[\textit{PE-Cond}]}\\
+$\caest {\cond {e_0} {e_1} {e_2}} $& iff &$ \caesti {e_0} {0} \wedge $\\
+&& $\rho_0 \sqsubseteq \rho \wedge$ \\
+&& $\widehat{\true} \in \vat_0 \Rightarrow \caesti {e_1} {1} \wedge \vat_1 \subseteq \vat \wedge \rho_1 \sqsubseteq \rho \wedge$ \\
+&& $\widehat{\false} \in \vat_0 \Rightarrow \caesti {e_2} {2} \wedge \vat_2 \subseteq \vat \wedge \rho_2 \sqsubseteq \rho$ \\
+{[\textit{PE-While}]}\\
+$\caest {\while {e_1} {e_2}} $& iff &$ \caesti {e_1} {1} \wedge $\\
+&& $\rho_1 \sqsubseteq \rho \wedge$ \\
+&& $\widehat{\true} \in \vat_1 \Rightarrow \caesti {e_2} {2} \wedge \vat_2 \subseteq \vat \wedge \rho_2 \sqsubseteq \rho \wedge$\\
+&& $\widehat{\false} \in \vat_0 \Rightarrow \widehat{\undef} \subseteq \vat$\\
+{[\textit{PE-GetField}]}\\
+$\caest {\lookup {e_1} {e_2}} $& iff &$ \caesti {e_1} {1} \wedge $\\
+&& $\rho_1 \sqsubseteq \rho \wedge$ \\
+&& $ \caesti {e_2} {2} \wedge $ \\
+&& $\rho_2 \sqsubseteq \rho \wedge$ \\
+&& $\widehat{get} (\vat_1, \vat_2) \subseteq \vat$ \\
+{[\textit{PE-SetField}]}\\
+$\caest {\store {e_0} {e_1} {e2}} $& iff &$ \caesti {e_0} {0} \wedge $\\
+&& $\rho_0 \sqsubseteq \rho \wedge$ \\
+&& $ \caesti {e_1} {1} \wedge $ \\
+&& $\rho_1 \sqsubseteq \rho \wedge$ \\
+&& $ \caesti {e_2} {2} \wedge $ \\
+&& $\rho_2 \sqsubseteq \rho \wedge$ \\
+&& $\widehat{set} (\vat_0, \vat_1, \vat_2) \subseteq \vat$ \\
+\end{tabular}
+\begin{tabular} {l l l}
+{[\textit{PE-DelField}]}\\
+$\caest {\delete {e_1} {e_2}} $& iff &$ \caesti {e_1} {1} \wedge $\\
+&& $\rho_1 \sqsubseteq \rho \wedge$ \\
+&& $ \caesti {e_2} {2} \wedge $ \\
+&& $\rho_2 \sqsubseteq \rho \wedge$ \\
+&& $\widehat{del} (\vat_1, \vat_2) \subseteq \vat$\\
+{[\textit{PE-Ref}]}\\
+$ C \modelrho \newref {r,\rho_r} {e} :\{r\} \gg \rho $& iff &$ \caest {e} \wedge $\\
+&& $\rho_r \sqsubseteq \rho_s \Rightarrow \vat \subseteq C_{\hat{\mu}}(r, \rho_r) $ \\
+{[\textit{PE-DeRef}]}\\
+$\caest {\deref {e}} $& iff &$ \caesti {e} {1} \wedge $\\
+&& $\vat_1 \subseteq \vat \wedge$ \\
+&& $\rho_1 \sqsubseteq \rho \wedge$ \\
+&& $\forall r \in \vat_1 : \forall \rho_r \sqsubseteq \rho_s : C_{\hat{\mu}}(r, \rho_r) \subseteq \vat$ \\
+{[\textit{PE-DeRef}]}\\
+$\caest {\setref {e_1} {e_2}} $& iff &$ \caesti {e} {1} \wedge $\\
+&& $\rho_1 \sqsubseteq \rho \wedge$ \\
+&& $ \caesti {e_2} {2} \wedge $ \\
+&& $\rho_2 \sqsubseteq \rho \wedge$ \\
+&& $\forall r \in \vat_1 : \forall \rho_r \sqsubseteq \rho_s : \vat_2 \subseteq C_{\hat{\mu}}(r, \rho_r) \wedge$ \\
+&& $\vat_2 \subseteq \vat $ \\
+{[\textit{PE-Send}]} \dots \\
+{[\textit{PE-Err}]} \dots \\
+{[\textit{PE-Exercise}]} \dots \\
+\end{tabular}
+
+$\oplus$
+
+% 
+%  $ [\textit{Pe-Var}] $& C \models x : \hat{v}$ iff $\rho(x) \subseteq \hat{v} \\
+%  $ [\textit{Pe-Lambda}] $& C \models \lambda{\vec{x_i}}{e_0} : \hat{v}$ iff $\rho(x) \subseteq \hat{v} \\
+\section{The Calculus}
+\label{sec:calculus}
+
+%\newpage
+
+\section{Static Semantics}
+\label{sec:statics}
+
+%\newpage
+
+\section{Checking Privilege Escalation}
+\label{sec:privesc}
+
+\newpage
+
+\section{Making Code More Secure: Unbundling}
+\label{sec:flow}
+
+\newpage
+
+\section{Proofs}
+\label{sec:proofs}
+
+\newpage
+
+\section{Ideas}
+\label{sec:ideas}
+
+\end{document}
