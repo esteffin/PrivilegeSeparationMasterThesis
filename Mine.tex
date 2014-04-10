@@ -41,6 +41,11 @@
 \newcommand{\letexprs}[3]{\mathbf{let}\ \vec{#1 = #2}\ \mathbf{in}\ #3}
 \newcommand{\caesti}[2]{C \modelrho #1 : \vat_{#2} \gg \rho_{#2}}
 \newcommand{\caest}[1]{C \modelrho #1 : \vat \gg \rho}
+\newcommand{\envs}{(C,R,\mu, P)}
+\newcommand{\ccesti}[2]{\envs \models_{c \rho_s} (#1)^{#2}}
+\newcommand{\ccest}[1]{\envs \models_{c \rho_s} #1}
+\newcommand{\ccestl}[1]{\envs \models_{c \rho_s} {(#1)}^{l}}
+\newcommand{\lbt}[1]{{t_#1}^{l_#1}}
 
 \author{Michele Bugliesi \and Stefano Calzavara \and Silvia Crafa \and Enrico Steffinlongo}
 \title{Static Enforcement of Least Privilege in Google Chrome Extensions}
@@ -53,6 +58,7 @@
 \tableofcontents
 
 \section{Security Rules}
+\section{Abstract succint}
 
 \begin{tabular}{l l l}
 {[\textit{PE-Val}]} \\
@@ -132,7 +138,59 @@ $\caest {\setref {e_1} {e_2}} $& iff &$ \caesti {e} {1} \wedge $\\
 {[\textit{PE-Exercise}]} \dots \\
 \end{tabular}
 
-$\oplus$
+
+\section{Compositional Verbose}
+\begin{tabular}{l l l}
+{[\textit{CV-Val}]} \\
+$ \ccestl {c} $ & iff & $\{d_c\} \subseteq C(l)$ \\ 
+{[\textit{CV-Var}]} \\
+$ \ccestl {x} $ & iff & $R(x) \subseteq C(l)$ \\ 
+{[\textit{CV-Lambda}]} \\
+$ \ccestl {\lam{x}{e_0}} $ & iff & $\{\lam{x}{e_0}\} \subseteq C(l) \wedge $\\
+&& $ \ccest {e_o} \wedge$ \\
+{[\textit{CV-Obj}]} \\
+$ \ccestl {\rec{\vec{str_i : {t_i}^{l_i}}}}$ & iff & $\forall i: \ccest {{t_i}^{l_i}} \wedge$\\
+&& $ P(l_i) \sqsubseteq P(l) \wedge$\\ 
+&& $\rec{\vec{str_i : C(l_i)}} \subseteq C_l $ \\
+{[\textit{CV-Let}]} \\
+$ \ccestl {\letexprs{x_i}{{t_i}^{l_i}}{{t'}^{l'}}}$ & iff & $ \ccest {{t'}^{l'}} \wedge$ \\
+&& $ P(l') \sqsubseteq P(l) \wedge$\\
+&& $ \forall i: \ccest {{t_i}^{l_i}} \wedge$ \\
+&& $ C(l_i) \subseteq R(x_i) \wedge$ \\
+&& $ P(l_i) \subseteq P(l) $ \\
+{[\textit{CV-App}]} \\
+$ \ccestl {\appl {\lbt 1} {\lbt 2}}$ & iff & $ \ccest {\lbt 1} \wedge \ccest {\lbt 2} \wedge$ \\
+&& $P(l_1) \sqsubseteq P(l) \wedge P(l_2) \sqsubseteq P(l)$ \\
+&& $\forall (\lam{x}{\lbt 0}) \in C(l_1) : C(l_2) \subseteq R(x) \wedge C(l_0) \subseteq C(l) \wedge P(l_0) \sqsubseteq P(l) $\\
+{[\textit{CV-Op}]} \\
+$ \ccestl {\op (\vec{\lbt i})} $& iff &$\forall i : \ccest {\lbt i} \wedge $\\
+&& $P(l_i) \sqsubseteq P(l) \wedge$\\
+&& $\widehat{op} (C(l_i)) \subseteq C(l) $\\
+{[\textit{CV-Cond}]}\\
+$\envs \models_{c \rho_s} $& iff &$ \ccest {\lbt 0} \wedge $\\
+$(\cond {\lbt 0} {\lbt 1} {\lbt 2})^l$&& $P(l_0) \sqsubseteq P(l) \wedge$ \\
+&& $\widehat{\true} \in C(l_0) \Rightarrow \ccest {\lbt 1} \wedge C(l_1) \subseteq C(l) \wedge P(l_1) \sqsubseteq P(l) \wedge$ \\
+&& $\widehat{\false} \in C(l_0) \Rightarrow \ccest {\lbt 2} \wedge C(l_2) \subseteq C(l) \wedge P(l_2) \sqsubseteq P(l)$ \\
+{[\textit{PE-While}]}\\
+$\caest {\while {e_1} {e_2}} $& iff &$ \caesti {e_1} {1} \wedge $\\
+&& $\rho_1 \sqsubseteq \rho \wedge$ \\
+&& $\widehat{\true} \in \vat_1 \Rightarrow \caesti {e_2} {2} \wedge \vat_2 \subseteq \vat \wedge \rho_2 \sqsubseteq \rho \wedge$\\
+&& $\widehat{\false} \in \vat_0 \Rightarrow \widehat{\undef} \subseteq \vat$\\
+{[\textit{PE-GetField}]}\\
+$\caest {\lookup {e_1} {e_2}} $& iff &$ \caesti {e_1} {1} \wedge $\\
+&& $\rho_1 \sqsubseteq \rho \wedge$ \\
+&& $ \caesti {e_2} {2} \wedge $ \\
+&& $\rho_2 \sqsubseteq \rho \wedge$ \\
+&& $\widehat{get} (\vat_1, \vat_2) \subseteq \vat$ \\
+{[\textit{PE-SetField}]}\\
+$\caest {\store {e_0} {e_1} {e2}} $& iff &$ \caesti {e_0} {0} \wedge $\\
+&& $\rho_0 \sqsubseteq \rho \wedge$ \\
+&& $ \caesti {e_1} {1} \wedge $ \\
+&& $\rho_1 \sqsubseteq \rho \wedge$ \\
+&& $ \caesti {e_2} {2} \wedge $ \\
+&& $\rho_2 \sqsubseteq \rho \wedge$ \\
+&& $\widehat{set} (\vat_0, \vat_1, \vat_2) \subseteq \vat$ \\
+\end{tabular}
 
 % 
 %  $ [\textit{Pe-Var}] $& C \models x : \hat{v}$ iff $\rho(x) \subseteq \hat{v} \\
