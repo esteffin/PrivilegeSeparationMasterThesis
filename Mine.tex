@@ -59,7 +59,6 @@
 
 \section{Security Rules}
 \section{Abstract succint}
-
 \begin{tabular}{l l l}
 {[\textit{PE-Val}]} \\
 $C \modelrho c : \vat$ & iff & $\{d_c\} \subseteq \vat$ \\ 
@@ -95,7 +94,7 @@ $\caest {\cond {e_0} {e_1} {e_2}} $& iff &$ \caesti {e_0} {0} \wedge $\\
 $\caest {\while {e_1} {e_2}} $& iff &$ \caesti {e_1} {1} \wedge $\\
 && $\rho_1 \sqsubseteq \rho \wedge$ \\
 && $\widehat{\true} \in \vat_1 \Rightarrow \caesti {e_2} {2} \wedge \vat_2 \subseteq \vat \wedge \rho_2 \sqsubseteq \rho \wedge$\\
-&& $\widehat{\false} \in \vat_0 \Rightarrow \widehat{\undef} \subseteq \vat$\\
+&& $\widehat{\false} \in \vat_1 \Rightarrow \widehat{\undef} \subseteq \vat$\\
 {[\textit{PE-GetField}]}\\
 $\caest {\lookup {e_1} {e_2}} $& iff &$ \caesti {e_1} {1} \wedge $\\
 && $\rho_1 \sqsubseteq \rho \wedge$ \\
@@ -123,10 +122,9 @@ $ C \modelrho \newref {r,\rho_r} {e} :\{r\} \gg \rho $& iff &$ \caest {e} \wedge
 && $\rho_r \sqsubseteq \rho_s \Rightarrow \vat \subseteq C_{\hat{\mu}}(r, \rho_r) $ \\
 {[\textit{PE-DeRef}]}\\
 $\caest {\deref {e}} $& iff &$ \caesti {e} {1} \wedge $\\
-&& $\vat_1 \subseteq \vat \wedge$ \\
 && $\rho_1 \sqsubseteq \rho \wedge$ \\
 && $\forall r \in \vat_1 : \forall \rho_r \sqsubseteq \rho_s : C_{\hat{\mu}}(r, \rho_r) \subseteq \vat$ \\
-{[\textit{PE-DeRef}]}\\
+{[\textit{PE-SetRef}]}\\
 $\caest {\setref {e_1} {e_2}} $& iff &$ \caesti {e} {1} \wedge $\\
 && $\rho_1 \sqsubseteq \rho \wedge$ \\
 && $ \caesti {e_2} {2} \wedge $ \\
@@ -137,6 +135,7 @@ $\caest {\setref {e_1} {e_2}} $& iff &$ \caesti {e} {1} \wedge $\\
 {[\textit{PE-Err}]} \dots \\
 {[\textit{PE-Exercise}]} \dots \\
 \end{tabular}
+
 
 
 \section{Compositional Verbose}
@@ -171,27 +170,54 @@ $\envs \models_{c \rho_s} $& iff &$ \ccest {\lbt 0} \wedge $\\
 $(\cond {\lbt 0} {\lbt 1} {\lbt 2})^l$&& $P(l_0) \sqsubseteq P(l) \wedge$ \\
 && $\widehat{\true} \in C(l_0) \Rightarrow \ccest {\lbt 1} \wedge C(l_1) \subseteq C(l) \wedge P(l_1) \sqsubseteq P(l) \wedge$ \\
 && $\widehat{\false} \in C(l_0) \Rightarrow \ccest {\lbt 2} \wedge C(l_2) \subseteq C(l) \wedge P(l_2) \sqsubseteq P(l)$ \\
-{[\textit{PE-While}]}\\
-$\caest {\while {e_1} {e_2}} $& iff &$ \caesti {e_1} {1} \wedge $\\
-&& $\rho_1 \sqsubseteq \rho \wedge$ \\
-&& $\widehat{\true} \in \vat_1 \Rightarrow \caesti {e_2} {2} \wedge \vat_2 \subseteq \vat \wedge \rho_2 \sqsubseteq \rho \wedge$\\
-&& $\widehat{\false} \in \vat_0 \Rightarrow \widehat{\undef} \subseteq \vat$\\
-{[\textit{PE-GetField}]}\\
-$\caest {\lookup {e_1} {e_2}} $& iff &$ \caesti {e_1} {1} \wedge $\\
-&& $\rho_1 \sqsubseteq \rho \wedge$ \\
-&& $ \caesti {e_2} {2} \wedge $ \\
-&& $\rho_2 \sqsubseteq \rho \wedge$ \\
-&& $\widehat{get} (\vat_1, \vat_2) \subseteq \vat$ \\
-{[\textit{PE-SetField}]}\\
-$\caest {\store {e_0} {e_1} {e2}} $& iff &$ \caesti {e_0} {0} \wedge $\\
-&& $\rho_0 \sqsubseteq \rho \wedge$ \\
-&& $ \caesti {e_1} {1} \wedge $ \\
-&& $\rho_1 \sqsubseteq \rho \wedge$ \\
-&& $ \caesti {e_2} {2} \wedge $ \\
-&& $\rho_2 \sqsubseteq \rho \wedge$ \\
-&& $\widehat{set} (\vat_0, \vat_1, \vat_2) \subseteq \vat$ \\
+{[\textit{CV-While}]}\\
+$\ccestl {\while {\lbt 1} {\lbt 2}} $& iff &$ \ccest {\lbt 1} \wedge $\\
+&& $P(l_1) \sqsubseteq P(l) \wedge$ \\
+&& $\widehat{\true} \in C(l_1) \Rightarrow \ccest {\lbt 2} \wedge C(l_2) \subseteq C(l) \wedge P(l_2) \sqsubseteq P(l) \wedge$\\
+&& $\widehat{\false} \in C(l_1) \Rightarrow \widehat{\undef} \subseteq C(l)$\\
+{[\textit{CV-GetField}]}\\
+$\ccestl {\lookup {\lbt 1} {\lbt 2}} $& iff &$ \ccest {\lbt1} \wedge $\\
+&& $P(l_1) \sqsubseteq P(l) \wedge$ \\
+&& $ \ccest {\lbt 2} \wedge $ \\
+&& $P(l_2) \sqsubseteq P(l) \wedge$ \\
+&& $\widehat{get} (C(l_1), C(l_2)) \subseteq C(l)$ \\
+{[\textit{CV-SetField}]}\\
+$\ccestl {\store {\lbt 0} {\lbt 1} {\lbt 2}} $& iff &$ \ccest {\lbt 0} \wedge $\\
+&& $P(l_0) \sqsubseteq P(l) \wedge$ \\
+&& $ \ccest {\lbt 1} \wedge $ \\
+&& $P(l_1) \sqsubseteq P(l) \wedge$ \\
+&& $ \ccest {\lbt 2} \wedge $ \\
+&& $P(l_2) \sqsubseteq P(l) \wedge$ \\
+&& $\widehat{set} (C(l_0), C(l_1), C(l_2)) \subseteq C(l)$ \\
 \end{tabular}
 
+\begin{tabular} {l l l}
+{[\textit{CV-DelField}]}\\
+$\ccestl {\delete {\lbt 1} {\lbt 2}} $& iff &$ \ccest {\lbt 1} \wedge $\\
+&& $P(l_1) \sqsubseteq P(l) \wedge$ \\
+&& $ \ccest {\lbt 2} \wedge $ \\
+&& $P(l_2) \sqsubseteq P(l) \wedge$ \\
+&& $\widehat{del} (C(l_1), C(l_2)) \subseteq C(l)$\\
+{[\textit{CV-Ref}]}\\
+$ \ccestl {\newref {r,\rho_r} {\lbt 1}} $& iff &$ \ccest {\lbt 1} \wedge $\\
+&& $ {r} \subseteq C(l) \wedge$ \\
+&& $ P(l_1) \sqsubseteq P(l) \wedge$ \\
+&& $ \rho_r \sqsubseteq \rho_s \Rightarrow C(l_1) \subseteq \mu(r, \rho_r) $ \\
+{[\textit{CV-DeRef}]}\\
+$\ccestl {\deref {\lbt 1}} $& iff &$ \ccest {\lbt 1}\wedge $\\
+&& $P(l_1) \sqsubseteq P(l) \wedge$ \\
+&& $\forall r \in C(l_1) : \forall \rho_r \sqsubseteq \rho_s : \mu(r, \rho_r) \subseteq C(l)$ \\
+{[\textit{CV-SetRef}]}\\
+$\ccestl {\setref {\lbt 1} {\lbt 2}} $& iff &$ \ccest {\lbt 1} \wedge $\\
+&& $ P(l_1) \sqsubseteq P(l) \wedge $ \\
+&& $ \ccest {\lbt 2} \wedge $ \\
+&& $ P(l_2) \sqsubseteq P(l) \wedge $ \\
+&& $ \forall r \in C(l_1) : \forall \rho_r \sqsubseteq \rho_s : C(l_2) \subseteq \mu(r, \rho_r) \wedge$ \\
+&& $ C(l_2) \subseteq C(l) $ \\
+{[\textit{PE-Send}]} \dots \\
+{[\textit{PE-Err}]} \dots \\
+{[\textit{PE-Exercise}]} \dots \\
+\end{tabular}
 % 
 %  $ [\textit{Pe-Var}] $& C \models x : \hat{v}$ iff $\rho(x) \subseteq \hat{v} \\
 %  $ [\textit{Pe-Lambda}] $& C \models \lambda{\vec{x_i}}{e_0} : \hat{v}$ iff $\rho(x) \subseteq \hat{v} \\
