@@ -23,7 +23,6 @@
 \usepackage{fullpage}
 \usepackage{pifont}
 \usepackage[textsize=footnotesize,backgroundcolor=white,linecolor=black]{todonotes}
-\usepackage{xifthen}
 
 \floatstyle{ruled}
 \restylefloat{table}
@@ -36,17 +35,19 @@
 \newcommand{\vat}[0]{\hat{v}}
 \newcommand{\Cat}[0]{\hat{C}}
 \newcommand{\muat}[0]{\hat{\mu}}
-\newcommand{\Rat}[0]{\hat{R}}
+\newcommand{\Env}[0]{\hat{\Gamma}}
 \newcommand{\Pat}[0]{\hat{P}}
 \newcommand{\modelrho}{\models_{\rho_s}}
-\newcommand{\aenvs}{(\Rat,\muat)}
+\newcommand{\aenvs}{(\Env,\muat)}
 \newcommand{\caesti}[2]{\aenvs \modelrho #1 : \vat_{#2} \gg \rho_{#2}}
 \newcommand{\caest}[1]{\aenvs \modelrho #1 : \vat \gg \rho}
-\newcommand{\cenvs}{(\Cat,\Rat,\muat,\Pat)}
+\newcommand{\cenvs}{(\Cat,\Env,\muat,\Pat)}
 \newcommand{\ccest}[1]{\cenvs \models_{c \rho_s} #1}
 \newcommand{\ccestl}[1]{\cenvs \models_{c \rho_s} {(#1)}^{\ell}}
 \newcommand{\lbt}[1]{{t_#1}^{\ell_#1}}
 \newcommand{\letexprs}[3]{\mathbf{let}\ \vec{#1 = #2}\ \mathbf{in}\ #3}
+%\DeclareExpandableDocumentCommand{\mcl2}[1]{\multicolumn{2}{l}{#1}}
+%\newcommand{\mcl3}[1]{\multicolumn{3}{l}{#1}}
 
 \author{Michele Bugliesi \and Stefano Calzavara \and Silvia Crafa \and Enrico Steffinlongo}
 \title{Static Enforcement of Least Privilege in Google Chrome Extensions}
@@ -60,169 +61,187 @@
 
 \section{Security Rules}
 \section{Abstract succint}
+
 \[
 \begin{array}{llcl}
 \mathit{Abstract\ cache} & \Cat & : & \labs \rightarrow \absvalues \\
-\mathit{Abstract\ variable\ environment} & \Rat & : & \vars \rightarrow \absvalues \\
+\mathit{Abstract\ variable\ environment} & \Env & : & \vars \rightarrow \absvalues \\
 \mathit{Abstract\ memory} & \absmem & : & \labs \times \perms \rightarrow \absvalues \\
 \mathit{Abstract\ permission\ cache} & \Pat & : & \labs \rightarrow \perms \\
 \end{array}
 \]
-\begin{tabular}{l l l}
-{[\textit{PE-Val}]} \\
-$\aenvs \modelrho c : \vat$ & iff & $\{d_c\} \subseteq \vat$ \\ 
-{[\textit{PE-Var}]} \\
-$\aenvs \modelrho x : \vat$ & iff & $\Rat(x) \subseteq \vat$ \\ 
-{[\textit{PE-Lambda}]} \\
-$\aenvs \modelrho \lam{x}{e} : \vat$ & iff & $\{\lam{x}{e}\} \subseteq \vat$ \\
-{[\textit{PE-Obj}]} \\
-$\caest {\rec{\vec{str_i : e_i}}}$ & iff & $\forall i: \caesti {e_i} {i} \wedge$\\
-&& $\rec{\vec{str_i :\vat_i}} \subseteq \vat \wedge$ \\
-&& $\bigsqcup_{i} \rho_i \sqsubseteq \rho$ \\ 
-{[\textit{PE-Let}]} \\
-$\caest {\letexprs{x_i}{e_i}{e'}}$ & iff & $\aenvs \modelrho e' : \vat \gg \rho' \wedge$ \\
-&& $ \forall i: \caesti {e_i} {i} \wedge$ \\
-&& $\vat_i \subseteq \Rat(x_i) \wedge$ \\
-&& $ \{\rho'\} \join \{\bigsqcup_i \rho_i\} \sqsubseteq \rho$ \\
-{[\textit{PE-App}]} \\
-$\caest {\appl {e_1} {e_2}}$ & iff & $ \caesti {e_1} {1} \wedge$ \\
-&& $\caesti {e_2} {2} \wedge$ \\
-&& $\rho_1 \sqsubseteq \rho \wedge$ \\
-&& $\rho_2 \sqsubseteq \rho \wedge$ \\
-&& $\forall (\lam{x}{e_0}) \in \vat_1 : \vat_2 \subseteq \Rat(x) \wedge \caesti {e_0} {0} \wedge \rho_0 \sqsubseteq \rho $\\
-{[\textit{PE-Op}]} \\
-$\caest {\op (\vec{e_i})} $& iff &$\forall i : \caesti {e_i} {i} \wedge $\\
-&& $\rho_i \sqsubseteq \rho$\\
-&& $\widehat{op} (\vec{\vat_i}) \subseteq \vat $\\
-{[\textit{PE-Cond}]}\\
-$\caest {\cond {e_0} {e_1} {e_2}} $& iff &$ \caesti {e_0} {0} \wedge $\\
-&& $\rho_0 \sqsubseteq \rho \wedge$ \\
-&& $\widehat{\true} \in \vat_0 \Rightarrow \caesti {e_1} {1} \wedge \vat_1 \subseteq \vat \wedge \rho_1 \sqsubseteq \rho \wedge$ \\
-&& $\widehat{\false} \in \vat_0 \Rightarrow \caesti {e_2} {2} \wedge \vat_2 \subseteq \vat \wedge \rho_2 \sqsubseteq \rho$ \\
-{[\textit{PE-While}]}\\
-$\caest {\while {e_1} {e_2}} $& iff &$ \caesti {e_1} {1} \wedge $\\
-&& $\rho_1 \sqsubseteq \rho \wedge$ \\
-&& $\widehat{\true} \in \vat_1 \Rightarrow \caesti {e_2} {2} \wedge \vat_2 \subseteq \vat \wedge \rho_2 \sqsubseteq \rho \wedge$\\
-&& $\widehat{\false} \in \vat_1 \Rightarrow \widehat{\undef} \subseteq \vat$\\
-{[\textit{PE-GetField}]}\\
-$\caest {\lookup {e_1} {e_2}} $& iff &$ \caesti {e_1} {1} \wedge $\\
-&& $\rho_1 \sqsubseteq \rho \wedge$ \\
-&& $ \caesti {e_2} {2} \wedge $ \\
-&& $\rho_2 \sqsubseteq \rho \wedge$ \\
-&& $\widehat{get} (\vat_1, \vat_2) \subseteq \vat$ \\
-{[\textit{PE-SetField}]}\\
-$\caest {\store {e_0} {e_1} {e2}} $& iff &$ \caesti {e_0} {0} \wedge $\\
-&& $\rho_0 \sqsubseteq \rho \wedge$ \\
-&& $ \caesti {e_1} {1} \wedge $ \\
-&& $\rho_1 \sqsubseteq \rho \wedge$ \\
-&& $ \caesti {e_2} {2} \wedge $ \\
-&& $\rho_2 \sqsubseteq \rho \wedge$ \\
-&& $\widehat{set} (\vat_0, \vat_1, \vat_2) \subseteq \vat$ \\
-\end{tabular}
-\begin{tabular} {l l l}
-{[\textit{PE-DelField}]}\\
-$\caest {\delete {e_1} {e_2}} $& iff &$ \caesti {e_1} {1} \wedge $\\
-&& $\rho_1 \sqsubseteq \rho \wedge$ \\
-&& $ \caesti {e_2} {2} \wedge $ \\
-&& $\rho_2 \sqsubseteq \rho \wedge$ \\
-&& $\widehat{del} (\vat_1, \vat_2) \subseteq \vat$\\
-{[\textit{PE-Ref}]}\\
-$ \aenvs \modelrho \newref {r,\rho_r} {e} :\{r\} \gg \rho $& iff &$ \caest {e} \wedge $\\
-&& $\rho_r \sqsubseteq \rho_s \Rightarrow \vat \subseteq \muat(r, \rho_r) $ \\
-{[\textit{PE-DeRef}]}\\
-$\caest {\deref {e}} $& iff &$ \caesti {e} {1} \wedge $\\
-&& $\rho_1 \sqsubseteq \rho \wedge$ \\
-&& $\forall r \in \vat_1 : \forall \rho_r \sqsubseteq \rho_s : \muat(r, \rho_r) \subseteq \vat$ \\
-{[\textit{PE-SetRef}]}\\
-$\caest {\setref {e_1} {e_2}} $& iff &$ \caesti {e} {1} \wedge $\\
-&& $\rho_1 \sqsubseteq \rho \wedge$ \\
-&& $ \caesti {e_2} {2} \wedge $ \\
-&& $\rho_2 \sqsubseteq \rho \wedge$ \\
-&& $\forall r \in \vat_1 : \forall \rho_r \sqsubseteq \rho_s : \vat_2 \subseteq \muat(r, \rho_r) \wedge$ \\
-&& $\vat_2 \subseteq \vat $ \\
+\begin{tabular}{l l l l}
+{[\textit{PE-Val}]}&\multicolumn{3}{l}{$\aenvs \modelrho c : \vat$ iff $\{d_c\} \subseteq \vat$} \\
+{[\textit{PE-Var}]}&\multicolumn{3}{l}{$\aenvs \modelrho x : \vat$ iff $\Env(x) \subseteq \vat$} \\ 
+{[\textit{PE-Lambda}]}&\multicolumn{3}{l}{$\aenvs \modelrho \lam{x}{e} : \vat$ iff $\{\lam{x}{e}\} \subseteq \vat$} \\
+{[\textit{PE-Obj}]}&\multicolumn{3}{l}{$\caest {\rec{\vec{str_i : e_i}}}$ iff} \\
+&&\multicolumn{2}{l}{$\forall i: \caesti {e_i} {i} \wedge$}\\
+&&&$\rec{\vec{str_i :\vat_i}} \subseteq \vat \wedge$ \\
+&&&$\rho_i \sqsubseteq \rho$ \\ 
+{[\textit{PE-Let}]}&\multicolumn{3}{l}{$\caest {\letexprs{x_i}{e_i}{e'}}$ iff}\\
+&&\multicolumn{2}{l}{$\aenvs \modelrho e' : \vat \gg \rho' \wedge$} \\
+&&\multicolumn{2}{l}{$\rho' \sqsubseteq \rho \wedge$} \\
+&&\multicolumn{2}{l}{$ \forall i:$}\\
+&&& $\caesti {e_i} {i} \wedge$ \\
+&&& $\vat_i \subseteq \Env(x_i) \wedge$ \\
+&&& $\rho_i \sqsubseteq \rho$ \\
+{[\textit{PE-App}]}&\multicolumn{3}{l}{$\caest {\appl {e_1} {e_2}}$ iff} \\
+&&\multicolumn{2}{l}{$\caesti {e_1} {1} \wedge$} \\
+&&\multicolumn{2}{l}{$\caesti {e_2} {2} \wedge$} \\
+&&\multicolumn{2}{l}{$\rho_1 \sqsubseteq \rho \wedge$} \\
+&&\multicolumn{2}{l}{$\rho_2 \sqsubseteq \rho \wedge$} \\
+&&\multicolumn{2}{l}{$\forall (\lam{x}{e_0}) \in \vat_1 :$}\\
+&&&$\vat_2 \subseteq \Env(x) \wedge$\\
+&&&$\caesti {e_0} {0} \wedge$\\ 
+&&&$\rho_0 \sqsubseteq \rho $\\
+{[\textit{PE-Op}]}&\multicolumn{3}{l}{$\caest {\op (\vec{e_i})} $ iff}\\
+&&\multicolumn{2}{l}{$\forall i :$}\\
+&&&$\caesti {e_i} {i} \wedge $\\
+&&&$\rho_i \sqsubseteq \rho \wedge$\\
+&&\multicolumn{2}{l}{$\widehat{op} (\vec{\vat_i}) \subseteq \vat $}\\
+{[\textit{PE-Cond}]}&\multicolumn{3}{l}{$\caest {\cond {e_0} {e_1} {e_2}} $ iff}\\
+&&\multicolumn{2}{l}{$\caesti {e_0} {0} \wedge$}\\
+&&\multicolumn{2}{l}{$\rho_0 \sqsubseteq \rho \wedge$} \\
+&&\multicolumn{2}{l}{$\widehat{\true} \in \vat_0 \Rightarrow$}\\
+&&&$\caesti {e_1} {1} \wedge \vat_1 \subseteq \vat \wedge \rho_1 \sqsubseteq \rho \wedge$ \\
+&&\multicolumn{2}{l}{$\widehat{\false} \in \vat_0 \Rightarrow$}\\
+&&&$\caesti {e_2} {2} \wedge \vat_2 \subseteq \vat \wedge \rho_2 \sqsubseteq \rho$ \\
+{[\textit{PE-While}]}&\multicolumn{3}{l}{$\caest {\while {e_1} {e_2}} $ iff}\\
+&&\multicolumn{2}{l}{$\caesti {e_1} {1} \wedge $}\\
+&&\multicolumn{2}{l}{$\rho_1 \sqsubseteq \rho \wedge$} \\
+&&\multicolumn{2}{l}{$\widehat{\true} \in \vat_1 \Rightarrow$}\\
+&&&$\caesti {e_2} {2} \wedge \vat_2 \subseteq \vat \wedge \rho_2 \sqsubseteq \rho \wedge$\\
+&&\multicolumn{2}{l}{$\widehat{\false} \in \vat_1 \Rightarrow$}\\
+&&&$\widehat{\undef} \subseteq \vat$\\
+{[\textit{PE-GetField}]}&\multicolumn{3}{l}{$\caest {\lookup {e_1} {e_2}} $ iff}\\
+&&\multicolumn{2}{l}{$ \caesti {e_1} {1} \wedge $}\\
+&&\multicolumn{2}{l}{$\rho_1 \sqsubseteq \rho \wedge$} \\
+&&\multicolumn{2}{l}{$ \caesti {e_2} {2} \wedge $} \\
+&&\multicolumn{2}{l}{$\rho_2 \sqsubseteq \rho \wedge$} \\
+&&\multicolumn{2}{l}{$\widehat{get} (\vat_1, \vat_2) \subseteq \vat$} \\
+\end{tabular}\newpage
+\begin{tabular} {l l l l}
+{[\textit{PE-SetField}]}&\multicolumn{3}{l}{$\caest {\store {e_0} {e_1} {e2}} $ iff}\\
+&&\multicolumn{2}{l}{$ \caesti {e_0} {0} \wedge $}\\
+&&\multicolumn{2}{l}{$\rho_0 \sqsubseteq \rho \wedge$} \\
+&&\multicolumn{2}{l}{$ \caesti {e_1} {1} \wedge $} \\
+&&\multicolumn{2}{l}{$\rho_1 \sqsubseteq \rho \wedge$} \\
+&&\multicolumn{2}{l}{$ \caesti {e_2} {2} \wedge $} \\
+&&\multicolumn{2}{l}{$\rho_2 \sqsubseteq \rho \wedge$} \\
+&&\multicolumn{2}{l}{$\widehat{set} (\vat_0, \vat_1, \vat_2) \subseteq \vat$} \\
+{[\textit{PE-DelField}]}&\multicolumn{3}{l}{$\caest {\delete {e_1} {e_2}} $ iff}\\
+&&\multicolumn{2}{l}{$ \caesti {e_1} {1} \wedge$}\\
+&&\multicolumn{2}{l}{$\rho_1 \sqsubseteq \rho \wedge$} \\
+&&\multicolumn{2}{l}{$ \caesti {e_2} {2} \wedge $} \\
+&&\multicolumn{2}{l}{$\rho_2 \sqsubseteq \rho \wedge$} \\
+&&\multicolumn{2}{l}{$\widehat{del} (\vat_1, \vat_2) \subseteq \vat$}\\
+{[\textit{PE-Ref}]}&\multicolumn{3}{l}{$ \aenvs \modelrho \newref {r,\rho_r} {e} :\{r\} \gg \rho $ iff}\\
+&&\multicolumn{2}{l}{$ \caest {e} \wedge $}\\
+&&\multicolumn{2}{l}{$\rho_r \sqsubseteq \rho_s \Rightarrow \vat \subseteq \muat(r, \rho_r) $} \\
+{[\textit{PE-DeRef}]}&\multicolumn{3}{l}{$\caest {\deref {e}} $ iff}\\
+&&\multicolumn{2}{l}{$\caesti {e} {1} \wedge $}\\
+&&\multicolumn{2}{l}{$\rho_1 \sqsubseteq \rho \wedge$ }\\
+&&\multicolumn{2}{l}{$\forall r \in \vat_1 : \forall \rho_r \sqsubseteq \rho_s : \muat(r, \rho_r) \subseteq \vat$ }\\
+{[\textit{PE-SetRef}]}&\multicolumn{3}{l}{$\caest {\setref {e_1} {e_2}} $ iff}\\
+&&\multicolumn{2}{l}{$ \caesti {e} {1} \wedge $}\\
+&&\multicolumn{2}{l}{$\rho_1 \sqsubseteq \rho \wedge$} \\
+&&\multicolumn{2}{l}{$ \caesti {e_2} {2} \wedge $}\\
+&&\multicolumn{2}{l}{$\rho_2 \sqsubseteq \rho \wedge$}\\
+&&\multicolumn{2}{l}{$\forall r \in \vat_1 : \forall \rho_r \sqsubseteq \rho_s :$}\\
+&&&$\vat_2 \subseteq \muat(r, \rho_r) \wedge$ \\
+&&&$\vat_2 \subseteq \vat $\\
 {[\textit{PE-Send}]} \dots \\
 {[\textit{PE-Err}]} \dots \\
 {[\textit{PE-Exercise}]} \dots \\
 \end{tabular}
 
-
-
 \section{Compositional Verbose}
-\begin{tabular}{l l l}
-{[\textit{CV-Val}]} \\
-$ \ccestl {c} $ & iff & $\{d_c\} \subseteq \Cat(\ell)$ \\ 
-{[\textit{CV-Var}]} \\
-$ \ccestl {x} $ & iff & $\Rat(x) \subseteq \Cat(\ell)$ \\ 
-{[\textit{CV-Lambda}]} \\
-$ \ccestl {\lam{x}{e_0}} $ & iff & $\{\lam{x}{e_0}\} \subseteq \Cat(\ell) \wedge $\\
-&& $ \ccest {e_o}$ \\
-{[\textit{CV-Obj}]} \\
-$ \ccestl {\rec{\vec{str_i : \lbt i}}}$ & iff & $\forall i: \ccest {\lbt i} \wedge$\\
-&& $ \Pat(\ell_i) \sqsubseteq \Pat(\ell) \wedge$\\ 
-&& $\rec{\vec{str_i : \Cat(\ell_i)}} \subseteq \Cat_\ell $ \\
-{[\textit{CV-Let}]} \\
-$ \ccestl {\letexprs{x_i}{\lbt i}{{t'}^{\ell'}}}$ & iff & $ \ccest {{t'}^{\ell'}} \wedge$ \\
-&& $ \Pat(\ell') \sqsubseteq \Pat(\ell) \wedge$\\
-&& $ \forall i: \ccest {{t_i}^{\ell_i}} \wedge$ \\
-&& $ \Cat(\ell_i) \subseteq \Rat(x_i) \wedge$ \\
-&& $ \Pat(\ell_i) \subseteq \Pat(\ell) $ \\
-{[\textit{CV-App}]} \\
-$ \ccestl {\appl {\lbt 1} {\lbt 2}}$ & iff & $ \ccest {\lbt 1} \wedge \ccest {\lbt 2} \wedge$ \\
-&& $\Pat(\ell_1) \sqsubseteq \Pat(\ell) \wedge \Pat(\ell_2) \sqsubseteq \Pat(\ell)$ \\
-&& $\forall (\lam{x}{\lbt 0}) \in \Cat(\ell_1) : \Cat(\ell_2) \subseteq \Rat(x) \wedge \Cat(\ell_0) \subseteq \Cat(\ell) \wedge \Pat(\ell_0) \sqsubseteq \Pat(\ell) $\\
-{[\textit{CV-Op}]} \\
-$ \ccestl {\op (\vec{\lbt i})} $& iff &$\forall i : \ccest {\lbt i} \wedge $\\
-&& $\Pat(\ell_i) \sqsubseteq \Pat(\ell) \wedge$\\
-&& $\widehat{op} (\Cat(\ell_i)) \subseteq \Cat(\ell) $\\
-{[\textit{CV-Cond}]}\\
-$\cenvs \models_{c \rho_s} $& iff &$ \ccest {\lbt 0} \wedge $\\
-$(\cond {\lbt 0} {\lbt 1} {\lbt 2})^\ell$&& $\Pat(\ell_0) \sqsubseteq \Pat(\ell) \wedge$ \\
-&& $\widehat{\true} \in \Cat(\ell_0) \Rightarrow \ccest {\lbt 1} \wedge \Cat(\ell_1) \subseteq \Cat(\ell) \wedge \Pat(\ell_1) \sqsubseteq \Pat(\ell) \wedge$ \\
-&& $\widehat{\false} \in \Cat(\ell_0) \Rightarrow \ccest {\lbt 2} \wedge \Cat(\ell_2) \subseteq \Cat(\ell) \wedge \Pat(\ell_2) \sqsubseteq \Pat(\ell)$ \\
-{[\textit{CV-While}]}\\
-$\ccestl {\while {\lbt 1} {\lbt 2}} $& iff &$ \ccest {\lbt 1} \wedge $\\
-&& $\Pat(\ell_1) \sqsubseteq \Pat(\ell) \wedge$ \\
-&& $\widehat{\true} \in \Cat(\ell_1) \Rightarrow \ccest {\lbt 2} \wedge \Cat(\ell_2) \subseteq \Cat(\ell) \wedge \Pat(\ell_2) \sqsubseteq \Pat(\ell) \wedge$\\
-&& $\widehat{\false} \in \Cat(\ell_1) \Rightarrow \widehat{\undef} \subseteq \Cat(\ell)$\\
-{[\textit{CV-GetField}]}\\
-$\ccestl {\lookup {\lbt 1} {\lbt 2}} $& iff &$ \ccest {\lbt1} \wedge $\\
-&& $\Pat(\ell_1) \sqsubseteq \Pat(\ell) \wedge$ \\
-&& $ \ccest {\lbt 2} \wedge $ \\
-&& $\Pat(\ell_2) \sqsubseteq \Pat(\ell) \wedge$ \\
-&& $\widehat{get} (\Cat(\ell_1), \Cat(\ell_2)) \subseteq \Cat(\ell)$ \\
-{[\textit{CV-SetField}]}\\
-$\ccestl {\store {\lbt 0} {\lbt 1} {\lbt 2}} $& iff &$ \ccest {\lbt 0} \wedge $\\
-&& $\Pat(\ell_0) \sqsubseteq \Pat(\ell) \wedge$ \\
-&& $ \ccest {\lbt 1} \wedge $ \\
-&& $\Pat(\ell_1) \sqsubseteq \Pat(\ell) \wedge$ \\
-&& $ \ccest {\lbt 2} \wedge $ \\
-&& $\Pat(\ell_2) \sqsubseteq \Pat(\ell) \wedge$ \\
-&& $\widehat{set} (\Cat(\ell_0), \Cat(\ell_1), \Cat(\ell_2)) \subseteq \Cat(\ell)$ \\
+\begin{tabular}{l l l l}
+{[\textit{CV-Val}]}&\multicolumn{3}{l}{$ \ccestl {c} $ iff $\{d_c\} \subseteq \Cat(\ell)$} \\ 
+{[\textit{CV-Var}]}&\multicolumn{3}{l}{$ \ccestl {x} $ iff $\Env(x) \subseteq \Cat(\ell)$} \\ 
+{[\textit{CV-Lambda}]}&\multicolumn{3}{l}{$ \ccestl {\lam{x}{e_0}} $ iff}\\
+&&\multicolumn{2}{l}{$\{\lam{x}{e_0}\} \subseteq \Cat(\ell) \wedge $}\\
+&&\multicolumn{2}{l}{$ \ccest {e_o}$}\\
+{[\textit{CV-Obj}]}&\multicolumn{3}{l}{$ \ccestl {\rec{\vec{str_i : \lbt i}}}$ iff}\\
+&&\multicolumn{2}{l}{$\forall i:$}\\
+&&&$\ccest {\lbt i} \wedge$\\
+&&&$\Pat(\ell_i) \sqsubseteq \Pat(\ell) \wedge$\\ 
+&&\multicolumn{2}{l}{$\rec{\vec{str_i : \Cat(\ell_i)}} \subseteq \Cat_\ell $} \\
+{[\textit{CV-Let}]}&\multicolumn{3}{l}{$ \ccestl {\letexprs{x_i}{\lbt i}{{t'}^{\ell'}}}$ iff}\\
+&&\multicolumn{2}{l}{$ \ccest {{t'}^{\ell'}} \wedge$} \\
+&&\multicolumn{2}{l}{$ \Pat(\ell') \sqsubseteq \Pat(\ell) \wedge$}\\
+&&\multicolumn{2}{l}{$ \forall i:$}\\
+&&&$\ccest {{t_i}^{\ell_i}} \wedge$ \\
+&&& $ \Cat(\ell_i) \subseteq \Env(x_i) \wedge$ \\
+&&& $ \Pat(\ell_i) \subseteq \Pat(\ell) $ \\
+{[\textit{CV-App}]}&\multicolumn{3}{l}{$ \ccestl {\appl {\lbt 1} {\lbt 2}}$ iff}\\
+&&\multicolumn{2}{l}{$\ccest {\lbt 1} \wedge \ccest {\lbt 2} \wedge$} \\
+&&\multicolumn{2}{l}{$\Pat(\ell_1) \sqsubseteq \Pat(\ell) \wedge \Pat(\ell_2) \sqsubseteq \Pat(\ell)$} \\
+&&\multicolumn{2}{l}{$\forall (\lam{x}{\lbt 0}) \in \Cat(\ell_1) :$}\\
+&&&$\Cat(\ell_2) \subseteq \Env(x) \wedge \Cat(\ell_0) \subseteq \Cat(\ell)$\\
+&&&$\wedge \Pat(\ell_0) \sqsubseteq \Pat(\ell) $\\
+{[\textit{CV-Op}]}&\multicolumn{3}{l}{$ \ccestl {\op (\vec{\lbt i})} $ iff}\\
+&&\multicolumn{2}{l}{$\forall i :$}\\
+&&&$\ccest {\lbt i} \wedge $\\
+&&&$\Pat(\ell_i) \sqsubseteq \Pat(\ell) \wedge$\\
+&&\multicolumn{2}{l}{$\widehat{op} (\Cat(\ell_i)) \subseteq \Cat(\ell) $}\\
+{[\textit{CV-Cond}]}&\multicolumn{3}{l}{$\ccestl{\cond {\lbt 0} {\lbt 1} {\lbt 2}} $ iff}\\
+&&\multicolumn{2}{l}{$ \ccest {\lbt 0} \wedge $}\\
+&&\multicolumn{2}{l}{$\Pat(\ell_0) \sqsubseteq \Pat(\ell) \wedge$} \\
+&&\multicolumn{2}{l}{$\widehat{\true} \in \Cat(\ell_0) \Rightarrow$}\\
+&&&$\ccest {\lbt 1} \wedge \Cat(\ell_1) \subseteq \Cat(\ell)\wedge$\\
+&&&$\Pat(\ell_1) \sqsubseteq \Pat(\ell) \wedge$ \\
+&&\multicolumn{2}{l}{$\widehat{\false} \in \Cat(\ell_0) \Rightarrow$}\\
+&&&$\ccest {\lbt 2} \wedge \Cat(\ell_2) \subseteq \Cat(\ell) \wedge$\\
+&&&$\Pat(\ell_2) \sqsubseteq \Pat(\ell)$ \\
+{[\textit{CV-While}]}&\multicolumn{3}{l}{$\ccestl {\while {\lbt 1} {\lbt 2}} $ iff}\\
+&&\multicolumn{2}{l}{$ \ccest {\lbt 1} \wedge $}\\
+&&\multicolumn{2}{l}{$\Pat(\ell_1) \sqsubseteq \Pat(\ell) \wedge$} \\
+&&\multicolumn{2}{l}{$\widehat{\true} \in \Cat(\ell_1) \Rightarrow$}\\
+&&&$\ccest {\lbt 2} \wedge \Cat(\ell_2) \subseteq \Cat(\ell) \wedge$\\
+&&&$ \Pat(\ell_2) \sqsubseteq \Pat(\ell) \wedge$\\
+&&\multicolumn{2}{l}{$\widehat{\false} \in \Cat(\ell_1) \Rightarrow \widehat{\undef} \subseteq \Cat(\ell)$}\\
 \end{tabular}
 
-\begin{tabular} {l l l}
-{[\textit{CV-DelField}]}\\
-$\ccestl {\delete {\lbt 1} {\lbt 2}} $& iff &$ \ccest {\lbt 1} \wedge $\\
-&& $\Pat(\ell_1) \sqsubseteq \Pat(\ell) \wedge$ \\
-&& $ \ccest {\lbt 2} \wedge $ \\
-&& $\Pat(\ell_2) \sqsubseteq \Pat(\ell) \wedge$ \\
-&& $\widehat{del} (\Cat(\ell_1), \Cat(\ell_2)) \subseteq \Cat(\ell)$\\
-{[\textit{CV-Ref}]}\\
-$ \ccestl {\newref {r,\rho_r} {\lbt 1}} $& iff &$ \ccest {\lbt 1} \wedge $\\
-&& $ \{r\} \subseteq \Cat(\ell) \wedge$ \\
-&& $ \Pat(\ell_1) \sqsubseteq \Pat(\ell) \wedge$ \\
-&& $ \rho_r \sqsubseteq \rho_s \Rightarrow \Cat(\ell_1) \subseteq \muat(r, \rho_r) $ \\
-{[\textit{CV-DeRef}]}\\
-$\ccestl {\deref {\lbt 1}} $& iff &$ \ccest {\lbt 1}\wedge $\\
-&& $\Pat(\ell_1) \sqsubseteq \Pat(\ell) \wedge$ \\
-&& $\forall r \in \Cat(\ell_1) : \forall \rho_r \sqsubseteq \rho_s : \muat(r, \rho_r) \subseteq \Cat(\ell)$ \\
-{[\textit{CV-SetRef}]}\\
-$\ccestl {\setref {\lbt 1} {\lbt 2}} $& iff &$ \ccest {\lbt 1} \wedge $\\
-&& $ \Pat(\ell_1) \sqsubseteq \Pat(\ell) \wedge $ \\
-&& $ \ccest {\lbt 2} \wedge $ \\
-&& $ \Pat(\ell_2) \sqsubseteq \Pat(\ell) \wedge $ \\
-&& $ \forall r \in \Cat(\ell_1) : \forall \rho_r \sqsubseteq \rho_s : \Cat(\ell_2) \subseteq \muat(r, \rho_r) \wedge$ \\
-&& $ \Cat(\ell_2) \subseteq \Cat(\ell) $ \\
+\begin{tabular} {l l l l}
+{[\textit{CV-GetField}]}&\multicolumn{3}{l}{$\ccestl {\lookup {\lbt 1} {\lbt 2}} $ iff}\\
+&&\multicolumn{2}{l}{$ \ccest {\lbt1} \wedge $}\\
+&&\multicolumn{2}{l}{$\Pat(\ell_1) \sqsubseteq \Pat(\ell) \wedge$} \\
+&&\multicolumn{2}{l}{$ \ccest {\lbt 2} \wedge $} \\
+&&\multicolumn{2}{l}{$\Pat(\ell_2) \sqsubseteq \Pat(\ell) \wedge$} \\
+&&\multicolumn{2}{l}{$\widehat{get} (\Cat(\ell_1), \Cat(\ell_2)) \subseteq \Cat(\ell)$} \\
+{[\textit{CV-SetField}]}&\multicolumn{3}{l}{$\ccestl {\store {\lbt 0} {\lbt 1} {\lbt 2}} $ iff}\\
+&&\multicolumn{2}{l}{$ \ccest {\lbt 0} \wedge $}\\
+&&\multicolumn{2}{l}{$\Pat(\ell_0) \sqsubseteq \Pat(\ell) \wedge$} \\
+&&\multicolumn{2}{l}{$ \ccest {\lbt 1} \wedge $} \\
+&&\multicolumn{2}{l}{$\Pat(\ell_1) \sqsubseteq \Pat(\ell) \wedge$} \\
+&&\multicolumn{2}{l}{$ \ccest {\lbt 2} \wedge $} \\
+&&\multicolumn{2}{l}{$\Pat(\ell_2) \sqsubseteq \Pat(\ell) \wedge$} \\
+&&\multicolumn{2}{l}{$\widehat{set} (\Cat(\ell_0), \Cat(\ell_1), \Cat(\ell_2)) \subseteq \Cat(\ell)$} \\
+{[\textit{CV-DelField}]}&\multicolumn{3}{l}{$\ccestl {\delete {\lbt 1} {\lbt 2}} $ iff}\\ 
+&&\multicolumn{2}{l}{$ \ccest {\lbt 1} \wedge $}\\
+&&\multicolumn{2}{l}{$\Pat(\ell_1) \sqsubseteq \Pat(\ell) \wedge$} \\
+&&\multicolumn{2}{l}{$ \ccest {\lbt 2} \wedge $} \\
+&&\multicolumn{2}{l}{$\Pat(\ell_2) \sqsubseteq \Pat(\ell) \wedge$} \\
+&&\multicolumn{2}{l}{$\widehat{del} (\Cat(\ell_1), \Cat(\ell_2)) \subseteq \Cat(\ell)$}\\
+{[\textit{CV-Ref}]}&\multicolumn{3}{l}{$ \ccestl {\newref {r,\rho_r} {\lbt 1}} $ iff}\\
+&&\multicolumn{2}{l}{$\ccest {\lbt 1} \wedge $}\\
+&&\multicolumn{2}{l}{$\{r\} \subseteq \Cat(\ell) \wedge$}\\
+&&\multicolumn{2}{l}{$\Pat(\ell_1) \sqsubseteq \Pat(\ell) \wedge$}\\
+&&\multicolumn{2}{l}{$\rho_r \sqsubseteq \rho_s \Rightarrow \Cat(\ell_1) \subseteq \muat(r, \rho_r) $}\\
+{[\textit{CV-DeRef}]}&\multicolumn{3}{l}{$\ccestl {\deref {\lbt 1}} $ iff}\\
+&&\multicolumn{2}{l}{$ \ccest {\lbt 1}\wedge $}\\
+&&\multicolumn{2}{l}{$\Pat(\ell_1) \sqsubseteq \Pat(\ell) \wedge$}\\
+&&\multicolumn{2}{l}{$\forall r \in \Cat(\ell_1) : \forall \rho_r \sqsubseteq \rho_s :$}\\
+&&&$\muat(r, \rho_r) \subseteq \Cat(\ell)$ \\
+{[\textit{CV-SetRef}]}&\multicolumn{3}{l}{$\ccestl {\setref {\lbt 1} {\lbt 2}} $ iff}\\
+&&\multicolumn{2}{l}{$ \ccest {\lbt 1} \wedge $}\\
+&&\multicolumn{2}{l}{$ \Pat(\ell_1) \sqsubseteq \Pat(\ell) \wedge $}\\
+&&\multicolumn{2}{l}{$ \ccest {\lbt 2} \wedge $}\\
+&&\multicolumn{2}{l}{$ \Pat(\ell_2) \sqsubseteq \Pat(\ell) \wedge $}\\
+&&\multicolumn{2}{l}{$ \forall r \in \Cat(\ell_1) : \forall \rho_r \sqsubseteq \rho_s :$}\\
+&&&$\Cat(\ell_2) \subseteq \muat(r, \rho_r) \wedge$ \\
+&&\multicolumn{2}{l}{$\Cat(\ell_2) \subseteq \Cat(\ell) $} \\
 {[\textit{PE-Send}]} \dots \\
 {[\textit{PE-Err}]} \dots \\
 {[\textit{PE-Exercise}]} \dots \\
@@ -232,19 +251,22 @@ $\ccestl {\setref {\lbt 1} {\lbt 2}} $& iff &$ \ccest {\lbt 1} \wedge $\\
 \newcommand{\genl}[1]{\mathcal{C}_*\llbracket (#1)^\ell \rrbracket}
 \newcommand{\gen}[1]{\mathcal{C}_*\llbracket (#1) \rrbracket}
 \newcommand{\Cel}{\mathsf{C}}
-\newcommand{\Rel}{\mathsf{R}}
+\newcommand{\Rel}{\mathsf{\Gamma}}
 \newcommand{\Pel}{\mathsf{P}}
 \newcommand{\Mel}{\mathsf{M}}
 \newcommand{\El}{\mathsf{E}}
 Constraint elements: $\El$.
 \[
 \begin{array}{llcl}
-\mathit{Cache element} & \Cel(\ell)& : & \labs \rightarrow \absvalues \\
-\mathit{Var element} & \Rel(\ell) & : & \vars \rightarrow \absvalues \\
-\mathit{State element} & \Mel(\perms, ref) & : & \labs \times \perms \rightarrow \absvalues \\
-\mathit{Permission element} & \Pel(\ell) & : & \labs \rightarrow \perms \\
+\mathit{Cache\ element} & \Cel(\ell)& : & \labs \rightarrow \absvalues \\
+\mathit{Var\ element} & \Rel(\ell) & : & \vars \rightarrow \absvalues \\
+\mathit{State\ element} & \Mel(\perms, ref) & : & \labs \times \perms \rightarrow \absvalues \\
 \end{array}
 \]
+
+Permission Element: $\Pel(\ell) : \labs \rightarrow \perms $
+
+
 Constraint form.
 \[
 \begin{array}{lrcl}
@@ -260,8 +282,6 @@ Misc:
 \begin{array}{l l}
 r_* & $is the set of all references of the program;$\\
 lambda_* & $is the set of all lambdas of the program;$\\
-s_* & $is the set of all reference of the object;$\\
-x_* & $is the set of all variable of the let binding;$\\
 \end{array}
 \]
 
