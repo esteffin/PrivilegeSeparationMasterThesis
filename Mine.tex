@@ -278,6 +278,7 @@ Constraint form.
 \mathit{Permission\ inclusion} & \Pel(\ell) & \sqsubseteq & \Pel(\ell') \\
 \mathit{Operation} & \widehat{Op}(\vec{\mathsf{Inclusion}_i}) & \subseteq & \El \\
 \mathit{Implication} & \{\vat\} \subseteq \El & \Rightarrow & \El \subseteq \El \\
+\mathit{Memory\ implication} & (\{r\} \subseteq \El \wedge \rho_r \sqsubseteq \rho_s) & \Rightarrow & \El \subseteq \El\\
 \end{array}
 \]
 Misc:
@@ -365,8 +366,8 @@ lambda_* & $is the set of all lambdas of the program;$\\
 &&\multicolumn{2}{l}{$ \gen {\lbt 1} \cup \gen {\lbt 2} \cup $}\\
 &&\multicolumn{2}{l}{$ \braces{\Pel(\ell_1) \sqsubseteq \Pel(\ell)} \cup$}\\
 &&\multicolumn{2}{l}{$ \braces{\Pel(\ell_2) \sqsubseteq \Pel(\ell)} \cup$}\\
-&&\multicolumn{2}{l}{$\{(r \in \Cel(\ell_1)) \wedge \mathbf{(\rho_r \sqsubseteq \rho_s)} \Rightarrow \Cel(\ell_2) \subseteq \Mel(r, \rho_r)\cup $}\\
-&&&$|\ r \in r_*, \rho_r \in \rho_s\}$ \\
+&&\multicolumn{2}{l}{$\{(r \in \Cel(\ell_1)) \wedge \mathbf{(\rho_r \sqsubseteq \rho_s)} \Rightarrow \Cel(\ell_2) \subseteq \Mel(r, \rho_r)$}\\
+&&&$|\ r \in r_*, \rho_r \in \rho_s\}\cup$ \\
 &&\multicolumn{2}{l}{$\braces{\Cel(\ell_2) \subseteq \Cel(\ell)}$} \\
 {[\textit{PE-Send}]} \dots \\
 {[\textit{PE-Err}]} \dots \\
