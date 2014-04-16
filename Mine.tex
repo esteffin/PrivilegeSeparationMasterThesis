@@ -150,9 +150,9 @@
 &&\multicolumn{2}{l}{$\forall r \in \vat_1 : \forall \rho_r \sqsubseteq \rho_s :$}\\
 &&&$\vat_2 \subseteq \muat(r, \rho_r) \wedge$ \\
 &&&$\vat_2 \subseteq \vat $\\
-{[\textit{PE-Send}]} \dots \\
-{[\textit{PE-Err}]} \dots \\
-{[\textit{PE-Exercise}]} \dots \\
+{[\textit{PE-Send}]}& \dots \\
+{[\textit{PE-Err}]}& \dots \\
+{[\textit{PE-Exercise}]}& \dots \\
 \end{tabular}
 
 \section{Compositional Verbose}
@@ -242,9 +242,9 @@
 &&\multicolumn{2}{l}{$ \forall r \in \Cat(\ell_1) : \forall \rho_r \sqsubseteq \rho_s :$}\\
 &&&$\Cat(\ell_2) \subseteq \muat(r, \rho_r) \wedge$ \\
 &&\multicolumn{2}{l}{$\Cat(\ell_2) \subseteq \Cat(\ell) $} \\
-{[\textit{PE-Send}]} \dots \\
-{[\textit{PE-Err}]} \dots \\
-{[\textit{PE-Exercise}]} \dots \\
+{[\textit{PE-Send}]}& \dots \\
+{[\textit{PE-Err}]}& \dots \\
+{[\textit{PE-Exercise}]}& \dots \\
 \end{tabular}
 
 \section{Generation of constraints}
@@ -278,7 +278,7 @@ Constraint form.
 \mathit{Permission\ inclusion} & \Pel(\ell) & \sqsubseteq & \Pel(\ell') \\
 \mathit{Operation} & \widehat{Op}(\vec{\mathsf{Inclusion}_i}) & \subseteq & \El \\
 \mathit{Implication} & \{\vat\} \subseteq \El & \Rightarrow & \El \subseteq \El \\
-\mathit{Memory\ implication} & (\{r\} \subseteq \El \wedge \rho_r \sqsubseteq \rho_s) & \Rightarrow & \El \subseteq \El\\
+%\mathit{Memory\ implication} & (\{r\} \subseteq \El \wedge \rho_r \sqsubseteq \rho_s) & \Rightarrow & \El \subseteq \El\\
 \end{array}
 \]
 Misc:
@@ -366,9 +366,9 @@ lambda_* & $is the set of all lambdas of the program;$\\
 &&\multicolumn{2}{l}{$\{r \in \Cel(\ell_1) \Rightarrow \Cel(\ell_2) \subseteq \Mel(r, \rho_r)$}\\
 &&&$|\ r \in r_*, \rho_r \in \rho_s\}\cup$ \\
 &&\multicolumn{2}{l}{$\braces{\Cel(\ell_2) \subseteq \Cel(\ell)}$} \\
-{[\textit{PE-Send}]} \dots \\
-{[\textit{PE-Err}]} \dots \\
-{[\textit{PE-Exercise}]} \dots \\
+{[\textit{PE-Send}]}& \dots \\
+{[\textit{PE-Err}]}& \dots \\
+{[\textit{PE-Exercise}]}& \dots \\
 \end{tabular}
 
 
