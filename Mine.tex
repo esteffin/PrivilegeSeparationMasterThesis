@@ -248,8 +248,8 @@
 \end{tabular}
 
 \section{Generation of constraints}
-\newcommand{\genl}[1]{\mathcal{C}_*\llbracket (#1)^\ell \rrbracket}
-\newcommand{\gen}[1]{\mathcal{C}_*\llbracket (#1) \rrbracket}
+\newcommand{\genl}[1]{\mathcal{C}_{*\rho_s}\llbracket (#1)^\ell \rrbracket}
+\newcommand{\gen}[1]{\mathcal{C}_{*\rho_s}\llbracket (#1) \rrbracket}
 \newcommand{\Cel}{\mathsf{C}}
 \newcommand{\Rel}{\mathsf{\Gamma}}
 \newcommand{\Pel}{\mathsf{P}}
@@ -262,7 +262,7 @@ Constraint elements: $\El$.
 \[
 \begin{array}{llcl}
 \mathit{Cache\ element} & \Cel(\ell)& : & \labs \rightarrow \absvalues \\
-\mathit{Var\ element} & \Rel(\ell) & : & \vars \rightarrow \absvalues \\
+\mathit{Var\ element} & \Rel(x) & : & \vars \rightarrow \absvalues \\
 \mathit{State\ element} & \Mel(\perms, ref) & : & \labs \times \perms \rightarrow \absvalues \\
 \end{array}
 \]
@@ -276,7 +276,7 @@ Constraint form.
 \mathit{Term\ inclusion} & \{\vat\} & \subseteq & \El \\
 \mathit{Element\ inclusion} & \El & \subseteq & \El \\
 \mathit{Permission\ inclusion} & \Pel(\ell) & \sqsubseteq & \Pel(\ell') \\
-\mathit{Operation} & \widehat{Op}(\vec{\mathsf{Inclusion}_i}) & \subseteq & \El \\
+\mathit{Operation} & \widehat{Op}(\vec{\El_i}) & \subseteq & \El \\
 \mathit{Implication} & \{\vat\} \subseteq \El & \Rightarrow & \El \subseteq \El \\
 %\mathit{Memory\ implication} & (\{r\} \subseteq \El \wedge \rho_r \sqsubseteq \rho_s) & \Rightarrow & \El \subseteq \El\\
 \end{array}
