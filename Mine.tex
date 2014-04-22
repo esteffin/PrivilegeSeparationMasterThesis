@@ -44,7 +44,7 @@
 \newcommand{\cenvs}{(\Cat,\Env,\muat,\Pat)}
 \newcommand{\ccest}[1]{\cenvs \models_{c \rho_s} #1}
 \newcommand{\ccestl}[1]{\cenvs \models_{c \rho_s} {(#1)}^{\ell}}
-\newcommand{\lbt}[1]{{t_#1}^{\ell_#1}}
+\newcommand{\lbt}[1]{{e_#1}^{\ell_#1}}
 \newcommand{\letexprs}[3]{\mathbf{let}\ \vec{#1 = #2}\ \mathbf{in}\ #3}
 %\DeclareExpandableDocumentCommand{\mcl2}[1]{\multicolumn{2}{l}{#1}}
 %\newcommand{\mcl3}[1]{\multicolumn{3}{l}{#1}}
@@ -159,9 +159,9 @@
 \begin{tabular}{l l l l}
 {[\textit{CV-Val}]}&\multicolumn{3}{l}{$ \ccestl {c} $ iff $\{d_c\} \subseteq \Cat(\ell)$} \\ 
 {[\textit{CV-Var}]}&\multicolumn{3}{l}{$ \ccestl {x} $ iff $\Env(x) \subseteq \Cat(\ell)$} \\ 
-{[\textit{CV-Lambda}]}&\multicolumn{3}{l}{$ \ccestl {\lam{x}{e_0}} $ iff}\\
-&&\multicolumn{2}{l}{$\{\lam{x}{e_0}\} \subseteq \Cat(\ell) \wedge $}\\
-&&\multicolumn{2}{l}{$ \ccest {e_o}$}\\
+{[\textit{CV-Lambda}]}&\multicolumn{3}{l}{$ \ccestl {\lam{x}{\lbt 0}} $ iff}\\
+&&\multicolumn{2}{l}{$\{\lam{x}{\lbt 0}\} \subseteq \Cat(\ell) \wedge $}\\
+&&\multicolumn{2}{l}{$ \ccest {\lbt 0}$}\\
 {[\textit{CV-Obj}]}&\multicolumn{3}{l}{$ \ccestl {\rec{\vec{str_i : \lbt i}}}$ iff}\\
 &&\multicolumn{2}{l}{$\forall i:$}\\
 &&&$\ccest {\lbt i} \wedge$\\
@@ -292,9 +292,9 @@ lambda_* & $is the set of all lambdas of the program;$\\
 \begin{tabular}{l l l l}
 {[\textit{CG-Val}]} & \multicolumn{3}{l}{$ \genl {c} = \{d_c\} \subseteq \Cel(\ell)$} \\ 
 {[\textit{CG-Var}]} & \multicolumn{3}{l}{$ \genl {x} = \Rel(x) \subseteq \Cel(\ell)$} \\ 
-{[\textit{CG-Lambda}]} & \multicolumn{3}{l}{$ \genl {\lam{x}{e_0}} = $}\\
-&& \multicolumn{2}{l}{$\{\{\lam{x}{e_0}\} \subseteq \Cel(\ell)\}\cup $}\\
-&& \multicolumn{2}{l}{$ \gen {e_o} $} \\
+{[\textit{CG-Lambda}]} & \multicolumn{3}{l}{$ \genl {\lam{x}{\lbt 0}} = $}\\
+&& \multicolumn{2}{l}{$\{\{\lam{x}{\lbt 0}\} \subseteq \Cel(\ell)\}\cup $}\\
+&& \multicolumn{2}{l}{$ \gen {\lbt 0} $} \\
 {[\textit{CG-Obj}]} & \multicolumn{3}{l}{$ \genl {\rec{\vec{str_i : \lbt i}}} = $}\\
 && \multicolumn{2}{l}{$\bigcup_i (\gen {\lbt i} \cup$}\\
 &&& $\{\Pel(\ell_i) \sqsubseteq \Pel(\ell)\})\cup$\\ 
