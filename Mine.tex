@@ -93,7 +93,8 @@
 &&\multicolumn{2}{l}{$\forall (\lam{x}{e_0}) \in \vat_1 :$}\\
 &&&$\vat_2 \subseteq \Env(x) \wedge$\\
 &&&$\caesti {e_0} {0} \wedge$\\ 
-&&&$\rho_0 \sqsubseteq \rho $\\
+&&&$\rho_0 \sqsubseteq \rho \wedge$\\
+&&&$\vat_0 \subseteq \vat $\\
 {[\textit{PE-Op}]}&\multicolumn{3}{l}{$\caest {\op (\vec{e_i})} $ iff}\\
 &&\multicolumn{2}{l}{$\forall i :$}\\
 &&&$\caesti {e_i} {i} \wedge $\\
@@ -167,19 +168,20 @@
 &&&$\ccest {\lbt i} \wedge$\\
 &&&$\Pat(\ell_i) \sqsubseteq \Pat(\ell) \wedge$\\ 
 &&\multicolumn{2}{l}{$\rec{\vec{str_i : \Cat(\ell_i)}} \subseteq \Cat_\ell $} \\
-{[\textit{CV-Let}]}&\multicolumn{3}{l}{$ \ccestl {\letexprs{x_i}{\lbt i}{{t'}^{\ell'}}}$ iff}\\
-&&\multicolumn{2}{l}{$ \ccest {{t'}^{\ell'}} \wedge$} \\
+{[\textit{CV-Let}]}&\multicolumn{3}{l}{$ \ccestl {\letexprs{x_i}{\lbt i}{{e'}^{\ell'}}}$ iff}\\
+&&\multicolumn{2}{l}{$ \ccest {{e'}^{\ell'}} \wedge$} \\
 &&\multicolumn{2}{l}{$ \Pat(\ell') \sqsubseteq \Pat(\ell) \wedge$}\\
+&&\multicolumn{2}{l}{$ \Cat(\ell') \subseteq \Cat(\ell) \wedge$}\\
 &&\multicolumn{2}{l}{$ \forall i:$}\\
-&&&$\ccest {{t_i}^{\ell_i}} \wedge$ \\
+&&&$\ccest {{e_i}^{\ell_i}} \wedge$ \\
 &&& $ \Cat(\ell_i) \subseteq \Env(x_i) \wedge$ \\
-&&& $ \Pat(\ell_i) \subseteq \Pat(\ell) $ \\
+&&& $ \Pat(\ell_i) \sqsubseteq \Pat(\ell) $ \\
 {[\textit{CV-App}]}&\multicolumn{3}{l}{$ \ccestl {\appl {\lbt 1} {\lbt 2}}$ iff}\\
 &&\multicolumn{2}{l}{$\ccest {\lbt 1} \wedge \ccest {\lbt 2} \wedge$} \\
 &&\multicolumn{2}{l}{$\Pat(\ell_1) \sqsubseteq \Pat(\ell) \wedge \Pat(\ell_2) \sqsubseteq \Pat(\ell)$} \\
 &&\multicolumn{2}{l}{$\forall (\lam{x}{\lbt 0}) \in \Cat(\ell_1) :$}\\
-&&&$\Cat(\ell_2) \subseteq \Env(x) \wedge \Cat(\ell_0) \subseteq \Cat(\ell)$\\
-&&&$\wedge \Pat(\ell_0) \sqsubseteq \Pat(\ell) $\\
+&&&$\Cat(\ell_2) \subseteq \Env(x) \wedge \Cat(\ell_0) \subseteq \Cat(\ell) \wedge$\\
+&&&$\Pat(\ell_0) \sqsubseteq \Pat(\ell) $\\
 {[\textit{CV-Op}]}&\multicolumn{3}{l}{$ \ccestl {\op (\vec{\lbt i})} $ iff}\\
 &&\multicolumn{2}{l}{$\forall i :$}\\
 &&&$\ccest {\lbt i} \wedge $\\
@@ -299,12 +301,13 @@ lambda_* & $is the set of all lambdas of the program;$\\
 && \multicolumn{2}{l}{$\bigcup_i (\gen {\lbt i} \cup$}\\
 &&& $\{\Pel(\ell_i) \sqsubseteq \Pel(\ell)\})\cup$\\ 
 && \multicolumn{2}{l}{$\braces{\rec{\vec{str_i : \Cel(\ell_i)}} \subseteq \Cel(\ell)} $} \\
-{[\textit{CG-Let}]} & \multicolumn{3}{l}{$\genl {\letexprs{x_i}{\lbt i}{{t'}^{\ell'}}} = $}\\
-&& \multicolumn{2}{l}{$ \gen {{t'}^{\ell'}} \cup$} \\
-&& \multicolumn{2}{l}{$ \{\Pel(\ell') \sqsubseteq \Pel(\ell)\} \cup$}\\
+{[\textit{CG-Let}]} & \multicolumn{3}{l}{$\genl {\letexprs{x_i}{\lbt i}{{e'}^{\ell'}}} = $}\\
 && \multicolumn{2}{l}{$ \bigcup_i (\gen {\lbt i} \cup$ }\\
 &&& $ \{\Cel(\ell_i) \subseteq \Rel(x_i)\} \cup$ \\
-&&& $ \braces{\Pel(\ell_i) \subseteq \Pel(\ell)}) $ \\
+&&& $ \braces{\Pel(\ell_i) \subseteq \Pel(\ell)}) \cup $ \\
+&& \multicolumn{2}{l}{$ \gen {{e'}^{\ell'}} \cup$} \\
+&& \multicolumn{2}{l}{$ \{\Pel(\ell') \sqsubseteq \Pel(\ell)\} \cup$}\\
+&& \multicolumn{2}{l}{$ \{\Cel(\ell') \subseteq \Cel(\ell)\} $}\\
 {[\textit{CG-App}]}&\multicolumn{3}{l}{$ \genl {\appl {\lbt 1} {\lbt 2}} = $}\\
 && \multicolumn{2}{l}{$\gen {\lbt 1} \cup \gen {\lbt 2} \cup$} \\
 && \multicolumn{2}{l}{$\braces{\Pel(\ell_1) \sqsubseteq \Pel(\ell)} \cup \braces{\Pel(\ell_2) \sqsubseteq \Pel(\ell)}\cup$} \\
@@ -358,13 +361,13 @@ lambda_* & $is the set of all lambdas of the program;$\\
 &&\multicolumn{2}{l}{$ \gen {\lbt 1} \cup$}\\
 &&\multicolumn{2}{l}{$\braces{\Pel(\ell_1) \sqsubseteq \Pel(\ell)} \cup$}\\
 &&\multicolumn{2}{l}{$\{r \in \Cel(\ell_1) \Rightarrow \Mel(r, \rho_r) \subseteq \Cel(\ell)$} \\
-&&&$|\ r \in r_*, \rho_r \in \rho_s\}$\\
+&&&$|\ r \in r_*, \rho_r \sqsubseteq \rho_s\}$\\
 {[\textit{CG-SetRef}]}&\multicolumn{3}{l}{$\genl {\setref {\lbt 1} {\lbt 2}} = $}\\
 &&\multicolumn{2}{l}{$ \gen {\lbt 1} \cup \gen {\lbt 2} \cup $}\\
 &&\multicolumn{2}{l}{$ \braces{\Pel(\ell_1) \sqsubseteq \Pel(\ell)} \cup$}\\
 &&\multicolumn{2}{l}{$ \braces{\Pel(\ell_2) \sqsubseteq \Pel(\ell)} \cup$}\\
 &&\multicolumn{2}{l}{$\{r \in \Cel(\ell_1) \Rightarrow \Cel(\ell_2) \subseteq \Mel(r, \rho_r)$}\\
-&&&$|\ r \in r_*, \rho_r \in \rho_s\}\cup$ \\
+&&&$|\ r \in r_*, \rho_r \sqsubseteq \rho_s\}\cup$ \\
 &&\multicolumn{2}{l}{$\braces{\Cel(\ell_2) \subseteq \Cel(\ell)}$} \\
 {[\textit{PE-Send}]}& \dots \\
 {[\textit{PE-Err}]}& \dots \\
