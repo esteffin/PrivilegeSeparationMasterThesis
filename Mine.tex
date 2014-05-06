@@ -374,7 +374,29 @@ lambda_* & $is the set of all lambdas of the program;$\\
 {[\textit{PE-Exercise}]}& \dots \\
 \end{tabular}
 
+\section{Abstract types}
+\label{sec:abstractTy}
+$ R_1=\rec{\vec{\widehat{str_i}:\widehat{v_i}}} \sqsubseteq \rec{\vec{\widehat{str_j}:\widehat{v_j}}}=R_2 $ sse:
+\begin{enumerate}
+\item $R_1$ ha meno campi di $R_2$
+\item ogni campo di $R_1$ e' piu' preciso del \textbf{corrispondente} campo di $R_2$ 
+\end{enumerate}
 
+$\forall i, \exists j: \widehat{str_i} \sqsubseteq \widehat{str_j}$\\
+$\forall i, \exists j: \widehat{str_i} \sqsubseteq \widehat{str_j} \Rightarrow \widehat{v_i} \sqsubseteq \widehat{v_j}$
+
+Set:
+\begin{itemize}
+\item Exact
+	\begin{itemize}
+	\item $\exists \rightarrow Union$
+	\item $\nexists \rightarrow add in prefix$
+	\end{itemize}
+\item Prefix
+	\begin{itemize}
+	\item aggiungo in $*$
+	\end{itemize}
+\end{itemize}
 
 \section{The Calculus}
 \label{sec:calculus}
