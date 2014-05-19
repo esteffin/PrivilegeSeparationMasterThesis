@@ -132,3 +132,19 @@
 \newcommand{\escalate}[1]{\,\gg #1}
 \newcommand{\despite}[1]{\ \mathbf{despite}\ #1}
 \newcommand{\permsleak}[1]{\mathit{Leak}_{#1}}
+
+%other mine
+\newcommand{\vat}[0]{\hat{v}}
+\newcommand{\Cat}[0]{\hat{C}}
+\newcommand{\muat}[0]{\hat{\mu}}
+\newcommand{\Env}[0]{\hat{\Gamma}}
+\newcommand{\Pat}[0]{\hat{P}}
+\newcommand{\modelrho}{\models_{\rho_s}}
+\newcommand{\aenvs}{(\Env,\muat)}
+\newcommand{\caesti}[2]{\aenvs \modelrho #1 : \vat_{#2} \gg \rho_{#2}}
+\newcommand{\caest}[1]{\aenvs \modelrho #1 : \vat \gg \rho}
+\newcommand{\cenvs}{(\Cat,\Env,\muat,\Pat)}
+\newcommand{\ccest}[1]{\cenvs \models_{c \rho_s} #1}
+\newcommand{\ccestl}[1]{\cenvs \models_{c \rho_s} {(#1)}^{\ell}}
+\newcommand{\lbt}[1]{{e_#1}^{\ell_#1}}
+\newcommand{\letexprs}[3]{\mathbf{let}\ \vec{#1 = #2}\ \mathbf{in}\ #3}

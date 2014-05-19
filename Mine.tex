@@ -1,9 +1,9 @@
-\documentclass[[12pt,a4paper,twoside,openrigh]{article} 
+\documentclass[[12pt,a4paper,twoside,openrigh]{report} 
 
+\usepackage[english]{babel}
 \usepackage{indentfirst}
 \usepackage{makeidx}
 \usepackage{pdfpages}
-\usepackage[italian]{babel}
 \usepackage[latin1]{inputenc}
 \usepackage{amssymb}
 \usepackage{amsmath}
@@ -32,25 +32,11 @@
 \newtheorem{theorem}{Theorem}
 \newtheorem{proposition}{Proposition}
 
-\newcommand{\vat}[0]{\hat{v}}
-\newcommand{\Cat}[0]{\hat{C}}
-\newcommand{\muat}[0]{\hat{\mu}}
-\newcommand{\Env}[0]{\hat{\Gamma}}
-\newcommand{\Pat}[0]{\hat{P}}
-\newcommand{\modelrho}{\models_{\rho_s}}
-\newcommand{\aenvs}{(\Env,\muat)}
-\newcommand{\caesti}[2]{\aenvs \modelrho #1 : \vat_{#2} \gg \rho_{#2}}
-\newcommand{\caest}[1]{\aenvs \modelrho #1 : \vat \gg \rho}
-\newcommand{\cenvs}{(\Cat,\Env,\muat,\Pat)}
-\newcommand{\ccest}[1]{\cenvs \models_{c \rho_s} #1}
-\newcommand{\ccestl}[1]{\cenvs \models_{c \rho_s} {(#1)}^{\ell}}
-\newcommand{\lbt}[1]{{e_#1}^{\ell_#1}}
-\newcommand{\letexprs}[3]{\mathbf{let}\ \vec{#1 = #2}\ \mathbf{in}\ #3}
 %\DeclareExpandableDocumentCommand{\mcl2}[1]{\multicolumn{2}{l}{#1}}
 %\newcommand{\mcl3}[1]{\multicolumn{3}{l}{#1}}
 
 \author{Michele Bugliesi \and Stefano Calzavara \and Silvia Crafa \and Enrico Steffinlongo}
-\title{Static Enforcement of Least Privilege in Google Chrome Extensions}
+\title{Privilege separation in browser architectures}
 
 \input{macros}
 
@@ -58,6 +44,10 @@
 \begin{document}
 \maketitle
 \tableofcontents
+
+\begin{abstract}
+In many software systems as modern web browsers the user and his sensitive data often interact with the untrusted outer world. This scenario can pose a serious threat to the user's private data and gives new relevance to an old story in computer science: providing controlled access to untrusted components, while preserving usability and ease of interaction. To address the threats of untrusted components, modern web browsers propose privilege-separated architectures, which isolate components that manage critical tasks and data from components which handle untrusted inputs. The former components are given strong permissions, possibly coinciding with the full set of permissions granted to the user, while the untrusted components are granted only limited privileges, to limit possible malicious behaviours: all the interactions between trusted and untrusted components is handled via message passing. In this thesis we introduce a formal semantics for privilege-separated architectures and we provide a general definition of privilege separation: we discuss how different privilege-separated architectures can be evaluated in our framework, identifying how different security threats can be avoided, mitigated or disregarded. Specifically, we evaluate in detail the existing Google Chrome Extension Architecture in our formal model and we discuss how its design can mitigate serious security risks, with only limited impact on the user experience. 
+\end{abstract}
 
 \section{Security Rules}
 \section{Abstract succint}

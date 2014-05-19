@@ -1,0 +1,131 @@
+\section{Constraint generation}
+\label{sec:ConstraintGen}
+\newcommand{\genl}[1]{\mathcal{C}_{*\rho_s}\llbracket (#1)^\ell \rrbracket}
+\newcommand{\gen}[1]{\mathcal{C}_{*\rho_s}\llbracket (#1) \rrbracket}
+\newcommand{\Cel}{\mathsf{C}}
+\newcommand{\Rel}{\mathsf{\Gamma}}
+\newcommand{\Pel}{\mathsf{P}}
+\newcommand{\Mel}{\mathsf{M}}
+\newcommand{\El}{\mathsf{E}}
+\newcommand{\braces}[1]{\{ #1 \} }
+\newcommand{\parens}[1]{\( #1 \) }
+
+Constraint elements: $\El$.
+\[
+\begin{array}{llcl}
+\mathit{Cache\ element} & \Cel(\ell)& : & \labs \rightarrow \absvalues \\
+\mathit{Var\ element} & \Rel(x) & : & \vars \rightarrow \absvalues \\
+\mathit{State\ element} & \Mel(\perms, ref) & : & \labs \times \perms \rightarrow \absvalues \\
+\end{array}
+\]
+
+Permission Element: $\Pel(\ell) : \labs \rightarrow \perms $
+
+
+Constraint form.
+\[
+\begin{array}{lrcl}
+\mathit{Term\ inclusion} & \{\vat\} & \subseteq & \El \\
+\mathit{Element\ inclusion} & \El & \subseteq & \El \\
+\mathit{Permission\ inclusion} & \Pel(\ell) & \sqsubseteq & \Pel(\ell') \\
+\mathit{Operation} & \widehat{Op}(\vec{\El_i}) & \subseteq & \El \\
+\mathit{Implication} & \{\vat\} \subseteq \El & \Rightarrow & \El \subseteq \El \\
+%\mathit{Memory\ implication} & (\{r\} \subseteq \El \wedge \rho_r \sqsubseteq \rho_s) & \Rightarrow & \El \subseteq \El\\
+\end{array}
+\]
+Misc:
+\[
+\begin{array}{l l}
+r_* & $is the set of all references of the program;$\\
+lambda_* & $is the set of all lambdas of the program;$\\
+\end{array}
+\]
+
+\begin{tabular}{l l l l}
+{[\textit{CG-Val}]} & \multicolumn{3}{l}{$ \genl {c} = \{d_c\} \subseteq \Cel(\ell)$} \\ 
+{[\textit{CG-Var}]} & \multicolumn{3}{l}{$ \genl {x} = \Rel(x) \subseteq \Cel(\ell)$} \\ 
+{[\textit{CG-Lambda}]} & \multicolumn{3}{l}{$ \genl {\lam{x}{\lbt 0}} = $}\\
+&& \multicolumn{2}{l}{$\{\{\lam{x}{\lbt 0}\} \subseteq \Cel(\ell)\}\cup $}\\
+&& \multicolumn{2}{l}{$ \gen {\lbt 0} $} \\
+{[\textit{CG-Obj}]} & \multicolumn{3}{l}{$ \genl {\rec{\vec{str_i : \lbt i}}} = $}\\
+&& \multicolumn{2}{l}{$\bigcup_i (\gen {\lbt i} \cup$}\\
+&&& $\{\Pel(\ell_i) \sqsubseteq \Pel(\ell)\})\cup$\\ 
+&& \multicolumn{2}{l}{$\braces{\rec{\vec{str_i : \Cel(\ell_i)}} \subseteq \Cel(\ell)} $} \\
+{[\textit{CG-Let}]} & \multicolumn{3}{l}{$\genl {\letexprs{x_i}{\lbt i}{{e'}^{\ell'}}} = $}\\
+&& \multicolumn{2}{l}{$ \bigcup_i (\gen {\lbt i} \cup$ }\\
+&&& $ \{\Cel(\ell_i) \subseteq \Rel(x_i)\} \cup$ \\
+&&& $ \braces{\Pel(\ell_i) \subseteq \Pel(\ell)}) \cup $ \\
+&& \multicolumn{2}{l}{$ \gen {{e'}^{\ell'}} \cup$} \\
+&& \multicolumn{2}{l}{$ \{\Pel(\ell') \sqsubseteq \Pel(\ell)\} \cup$}\\
+&& \multicolumn{2}{l}{$ \{\Cel(\ell') \subseteq \Cel(\ell)\} $}\\
+{[\textit{CG-App}]}&\multicolumn{3}{l}{$ \genl {\appl {\lbt 1} {\lbt 2}} = $}\\
+&& \multicolumn{2}{l}{$\gen {\lbt 1} \cup \gen {\lbt 2} \cup$} \\
+&& \multicolumn{2}{l}{$\braces{\Pel(\ell_1) \sqsubseteq \Pel(\ell)} \cup \braces{\Pel(\ell_2) \sqsubseteq \Pel(\ell)}\cup$} \\
+&& \multicolumn{2}{l}{$\{\braces t \subseteq \Cel(\ell_1) \Rightarrow \Cel(\ell_2) \subseteq \Rel(x)$}\\
+&&&$| t = (\lam {x} {\lbt 0}) \in lambda_* \}\cup$\\
+&& \multicolumn{2}{l}{$\{\braces t \subseteq \Cel(\ell_1) \Rightarrow \Cel(\ell_0) \subseteq \Cel(\ell)$}\\
+&&&$| t = (\lam {x} {\lbt 0}) \in lambda_* \}\cup$\\
+&& \multicolumn{2}{l}{$\{\braces t \subseteq \Cel(\ell_1) \Rightarrow \Pel(\ell_0) \sqsubseteq \Pel(\ell)$}\\
+&&&$| t = (\lam {x} {\lbt 0}) \in lambda_* \}\cup$\\
+{[\textit{CG-Op}]}&\multicolumn{3}{l}{$ \genl {\op (\vec{\lbt i})} = $}\\
+&&\multicolumn{2}{l}{$\bigcup_i (\gen {\lbt i} \cup \braces{\Pel(\ell_i) \sqsubseteq \Pel(\ell)})\cup$}\\
+&&\multicolumn{2}{l}{$\braces{\widehat{op} (\Cel(\ell_i)) \subseteq \Cel(\ell)}$}\\
+{[\textit{CG-Cond}]}&\multicolumn{3}{l}{$\genl{\cond {\lbt 0} {\lbt 1} {\lbt 2}} = $}\\
+&&\multicolumn{2}{l}{$ \gen {\lbt 0} \cup \gen {\lbt 1} \cup \gen {\lbt 2} \cup$}\\
+&&\multicolumn{2}{l}{$\braces{\Pat(\ell_0) \sqsubseteq \Pat(\ell)} \cup$} \\
+&&\multicolumn{2}{l}{$\braces{\widehat{\true} \in \Cel(\ell_0) \Rightarrow \Cel(\ell_1) \subseteq \Cel(\ell)}\cup$}\\
+&&\multicolumn{2}{l}{$\braces{\widehat{\true} \in \Cel(\ell_0) \Rightarrow \Pel(\ell_1) \sqsubseteq \Pel(\ell)}\cup$} \\
+&&\multicolumn{2}{l}{$\braces{\widehat{\false} \in \Cel(\ell_0) \Rightarrow \Cel(\ell_2) \subseteq \Cel(\ell)}\cup$}\\
+&&\multicolumn{2}{l}{$\braces{\widehat{\false} \in \Cel(\ell_0) \Rightarrow \Pel(\ell_2) \sqsubseteq \Pel(\ell)}$} \\
+{[\textit{CG-While}]}&\multicolumn{3}{l}{$\genl {\while {\lbt 1} {\lbt 2}} = $}\\
+&&\multicolumn{2}{l}{$ \gen {\lbt 1} \cup \gen {\lbt 2} \cup $}\\
+&&\multicolumn{2}{l}{$\braces{\Pel(\ell_1) \sqsubseteq \Pel(\ell)} \cup$} \\
+&&\multicolumn{2}{l}{$\braces{\widehat{\true} \in \Cel(\ell_1) \Rightarrow \Cel(\ell_2) \subseteq \Cel(\ell) }\cup$}\\
+&&\multicolumn{2}{l}{$\braces{\widehat{\true} \in \Cel(\ell_1) \Rightarrow \Pel(\ell_2) \subseteq \Pel(\ell) }\cup$}\\
+&&\multicolumn{2}{l}{$\braces{\widehat{\false} \in \Cel(\ell_1) \Rightarrow \widehat{\undef} \subseteq \Cel(\ell)}$}\\
+\end{tabular}
+\newpage
+\begin{tabular} {l l l l}
+{[\textit{CG-GetField}]}&\multicolumn{3}{l}{$\genl {\lookup {\lbt 1} {\lbt 2}} = $}\\
+&&\multicolumn{2}{l}{$ \gen {\lbt1} \cup \gen {\lbt 2} \cup$}\\
+&&\multicolumn{2}{l}{$\braces{\Pel(\ell_1) \sqsubseteq \Pel(\ell)} \cup$} \\
+&&\multicolumn{2}{l}{$\braces{\Pel(\ell_2) \sqsubseteq \Pel(\ell)} \cup$} \\
+&&\multicolumn{2}{l}{$\widehat{get} (\Cel(\ell_1), \Cel(\ell_2)) \subseteq \Cel(\ell)$} \\
+{[\textit{CG-SetField}]}&\multicolumn{3}{l}{$\gen {\store {\lbt 0} {\lbt 1} {\lbt 2}} = $}\\
+&&\multicolumn{2}{l}{$ \gen {\lbt 0} \cup \genl {\lbt 1} \cup \gen {\lbt 2} \cup $}\\
+&&\multicolumn{2}{l}{$\braces{\Pel(\ell_1) \sqsubseteq \Pel(\ell)} \cup$} \\
+&&\multicolumn{2}{l}{$\braces{\Pel(\ell_2) \sqsubseteq \Pel(\ell)} \cup$} \\
+&&\multicolumn{2}{l}{$\braces{\Pel(\ell_3) \sqsubseteq \Pel(\ell)} \cup$} \\
+&&\multicolumn{2}{l}{$\widehat{set} (\Cel(\ell_1), \Cel(\ell_2), \Cel(\ell_2)) \subseteq \Cel(\ell)$} \\
+{[\textit{CG-DelField}]}&\multicolumn{3}{l}{$\genl {\delete {\lbt 1} {\lbt 2}} = $}\\ 
+&&\multicolumn{2}{l}{$ \gen {\lbt1} \cup \gen {\lbt 2} \cup$}\\
+&&\multicolumn{2}{l}{$\braces{\Pel(\ell_1) \sqsubseteq \Pel(\ell)} \cup$} \\
+&&\multicolumn{2}{l}{$\braces{\Pel(\ell_2) \sqsubseteq \Pel(\ell)} \cup$} \\
+&&\multicolumn{2}{l}{$\widehat{del} (\Cel(\ell_1), \Cel(\ell_2)) \subseteq \Cel(\ell)$}\\
+{[\textit{CG-Ref}]}&\multicolumn{3}{l}{$ \genl {\newref {r,\rho_r} {\lbt 1}} = $}\\
+&&\multicolumn{2}{l}{$\gen {\lbt 1} \cup $}\\
+&&\multicolumn{2}{l}{$\braces{\{r\} \subseteq \Cel(\ell)} \cup$}\\
+&&\multicolumn{2}{l}{$\braces{\Pel(\ell_1) \sqsubseteq \Pel(\ell)} \cup$}\\
+&&\multicolumn{2}{l}{$\braces{\rho_r \sqsubseteq \rho_s \Rightarrow \Cel(\ell_1) \subseteq \Mel(r, \rho_r)} $}\\
+{[\textit{CG-DeRef}]}&\multicolumn{3}{l}{$\genl {\deref {\lbt 1}} = $}\\
+&&\multicolumn{2}{l}{$ \gen {\lbt 1} \cup$}\\
+&&\multicolumn{2}{l}{$\braces{\Pel(\ell_1) \sqsubseteq \Pel(\ell)} \cup$}\\
+&&\multicolumn{2}{l}{$\{r \in \Cel(\ell_1) \Rightarrow \Mel(r, \rho_r) \subseteq \Cel(\ell)$} \\
+&&&$|\ r \in r_*, \rho_r \sqsubseteq \rho_s\}$\\
+{[\textit{CG-SetRef}]}&\multicolumn{3}{l}{$\genl {\setref {\lbt 1} {\lbt 2}} = $}\\
+&&\multicolumn{2}{l}{$ \gen {\lbt 1} \cup \gen {\lbt 2} \cup $}\\
+&&\multicolumn{2}{l}{$ \braces{\Pel(\ell_1) \sqsubseteq \Pel(\ell)} \cup$}\\
+&&\multicolumn{2}{l}{$ \braces{\Pel(\ell_2) \sqsubseteq \Pel(\ell)} \cup$}\\
+&&\multicolumn{2}{l}{$\{r \in \Cel(\ell_1) \Rightarrow \Cel(\ell_2) \subseteq \Mel(r, \rho_r)$}\\
+&&&$|\ r \in r_*, \rho_r \sqsubseteq \rho_s\}\cup$ \\
+&&\multicolumn{2}{l}{$\braces{\Cel(\ell_2) \subseteq \Cel(\ell)}$} \\
+{[\textit{PE-Send}]}& \dots \\
+{[\textit{PE-Err}]}& \dots \\
+{[\textit{PE-Exercise}]}& \dots \\
+\end{tabular}
+
+\section{Constraint solving}
+\label{sec:ConstraintSolving}
+
+\section{Implementation-specific details}
+\label{sec:ImplSpecDetails}
