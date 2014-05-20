@@ -1,0 +1,138 @@
+{
+module LambdaJS.Lexer
+open System
+open LambdaJS.Parser
+open Microsoft.FSharp.Text.Lexing
+open Utils.ParsingUtils
+open LambdaJS.PreParsing
+
+let lexeme lexbuf =
+    LexBuffer<char>.LexemeString lexbuf
+let newline (lexbuf : LexBuffer<_>) = lexbuf.EndPos <- lexbuf.EndPos.NextLine
+let get_info (lexbuf : LexBuffer<_>) = get_location lexbuf
+let ($) = (<|)
+}
+
+// These are some regular expression definitions
+let digit = ['0'-'9']
+let whitespace = [' ' '\t' ]
+let newline = ('\n' | '\r' '\n')
+let nat = digit+
+let ureal = digit+ ('.' digit+)? | '.' digit+
+let sreal = ['-']? ureal
+let real = sreal | sreal 'e' int | int 'e' int
+let int = ['-']? nat
+let long = int 'L'
+let quoted = "\"" [^'"']* "\""
+let id = ['$' 'A'-'Z' 'a'-'z' '_']['a'-'z' 'A'-'Z' '0'-'9' '_' '$' '-']*
+let tmp_var = '$' nat
+let global_var = '$' id
+let at_call = '@' id
+let ddstr = '$' '$'+ id
+
+let qid = '$' id '.' (id '.')* id
+
+rule comment = parse
+| "*/"                          { tokenize lexbuf }
+| newline                       { newline lexbuf; comment lexbuf }
+| _                             { comment lexbuf }
+
+and linecomment = parse
+| newline                       { newline lexbuf; tokenize lexbuf }
+| _                             { linecomment lexbuf }
+
+and tokenize = parse
+| "/*"                          { comment lexbuf }
+| "//"                          { linecomment lexbuf }
+| eof                           { EOF }
+| whitespace	                  { tokenize lexbuf }
+| newline                       { newline lexbuf; tokenize lexbuf }
+// Numerical constants
+| "+nan.0"                      { NAN  $ get_info lexbuf }
+| "+inf.0"                      { PINF $ get_info lexbuf }
+| "-inf.0"                      { MINF $ get_info lexbuf }
+// Bool
+| "#t"                          { TRUE $ get_info lexbuf }
+| "#f"                          { FALSE $ get_info lexbuf }
+// Constants
+| "undefined"                   { UNDEFINED $ get_info lexbuf }
+| "null"                        { NULL $ get_info lexbuf }
+// Operators
+| "+"                           { NPLUS $ get_info lexbuf }
+| "string-+"                    { SPLUS $ get_info lexbuf }
+| "*"                           { MUL $ get_info lexbuf }
+| "/"                           { DIV $ get_info lexbuf }
+| "%"                           { MOD $ get_info lexbuf }
+| "-"                           { SUB $ get_info lexbuf }
+| "<"                           { LT $ get_info lexbuf }
+| "string-<"                    { SLT $ get_info lexbuf }
+| "==="                         { SEQ $ get_info lexbuf }
+| "=="                          { AEQ $ get_info lexbuf }
+| "typeof"                      { TYPEOF $ get_info lexbuf }
+| "surface-typeof"              { SURF_TYPEOF $ get_info lexbuf }
+| "prim->number"                { PRIM_TO_NUM $ get_info lexbuf }
+| "prim->string"                { PRIM_TO_STR $ get_info lexbuf }
+| "prim->bool"                  { PRIM_TO_BOOL $ get_info lexbuf }
+| "prim?"                       { IS_PRIM $ get_info lexbuf }
+| "to-integer"                  { TO_INT $ get_info lexbuf }
+| "to-int-32"                   { TO_INT32 $ get_info lexbuf }
+| "to-uint-32"                  { TO_UINT32 $ get_info lexbuf }
+| "&"                           { BAND $ get_info lexbuf }
+| "\\|"                         { BOR $ get_info lexbuf }
+| "^"                           { BXOR $ get_info lexbuf }
+| "~"                           { BNOT $ get_info lexbuf }
+| "<<"                          { SHL $ get_info lexbuf }
+| ">>"                          { SHR $ get_info lexbuf }
+| ">>>"                         { ZFSHR $ get_info lexbuf }
+| "has-own-prop?"               { HAS_OWN_PROP $ get_info lexbuf }
+| "print-string"                { PRINT $ get_info lexbuf }
+| "str-contains"                { SCONTAINS $ get_info lexbuf }
+| "obj-iterate-has-next?"       { ITER_HAS_NEXT $ get_info lexbuf }
+| "obj-iterate-next"            { ITER_NEXT $ get_info lexbuf }
+| "obj-iterate-key"             { ITER_KEY $ get_info lexbuf }
+| "str-startswith"              { STARTS_WITH $ get_info lexbuf }
+| "str-length"                  { SLENGTH $ get_info lexbuf }
+| "str-split-regexp"            { SSPLIT_REGEXP $ get_info lexbuf }
+| "str-split-strexp"            { SSPLIT_STREXP $ get_info lexbuf }
+| "obj-can-delete?"             { CAN_DELETE $ get_info lexbuf }
+| "math-exp"                    { EXP $ get_info lexbuf }
+| "math-log"                    { LOG $ get_info lexbuf }
+| "math-cos"                    { COS $ get_info lexbuf }
+| "math-sin"                    { SIN $ get_info lexbuf }
+| "math-abs"                    { ABS $ get_info lexbuf }
+| "math-pow"                    { POW $ get_info lexbuf }
+| "regexp-quote"                { PREGEXP_QUOTE $ get_info lexbuf }
+| "regexp-match"                { REGEXP_MATCH $ get_info lexbuf }
+// Keywords
+| "lambda"                      { LAMBDA $ get_info lexbuf }
+| "object"                      { OBJECT $ get_info lexbuf }
+| "if"                          { IF $ get_info lexbuf }
+| "label"                       { LABEL $ get_info lexbuf }
+| "break"                       { BREAK $ get_info lexbuf }
+| "begin"                       { BEGIN $ get_info lexbuf }
+| "let"                         { LET $ get_info lexbuf }
+| "throw"                       { THROW $ get_info lexbuf }
+| "try-catch"                   { TRY_CATCH $ get_info lexbuf }
+| "try-finally"                 { TRY_FINALLY $ get_info lexbuf }
+| "alloc"                       { ALLOC $ get_info lexbuf }
+| "deref"                       { DEREF $ get_info lexbuf }
+| "get-field"                   { GET_FIELD $ get_info lexbuf }
+| "set!"                        { SET $ get_info lexbuf }
+| "eval-semantic-bomb"          { EVAL_SEMANTIC_BOMB $ get_info lexbuf }
+| "update-field"                { UPDATE_FIELD $ get_info lexbuf }
+| "delete-field"                { DELETE_FIELD $ get_info lexbuf }
+| "while"                       { WHILE $ get_info lexbuf }
+// Misc
+| "("			                      { BRA $ get_info lexbuf }
+| ")"			                      { KET $ get_info lexbuf }
+// literals
+| int         							    { INT32 (Int32.Parse(lexeme lexbuf), get_info lexbuf) }
+| real                          { FLOAT (Double.Parse(lexeme lexbuf), get_info lexbuf) }
+| quoted                        { let s = lexeme lexbuf in STRING (s.Trim [|'\"'|], get_info lexbuf) } 
+| id                            { ID (lexeme lexbuf, get_info lexbuf) }
+| qid                           { ID (lexeme lexbuf, get_info lexbuf) }
+| ddstr                         { ID (lexeme lexbuf, get_info lexbuf) }
+| tmp_var                       { TMP_VAR (lexeme lexbuf, get_info lexbuf) }
+| global_var                    { GLOBAL_VAR (lexeme lexbuf, get_info lexbuf) }
+| at_call                       { AT_CALL (lexeme lexbuf, get_info lexbuf) }
+
