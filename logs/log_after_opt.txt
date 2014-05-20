@@ -1,0 +1,134 @@
+Desugaring -full Source.js
+Full desugaring enabled: include prelude and env.
+No out found. Using default (desugared.Source.js).
+
+Processing desugared.Source.js
+Variable $makeException not found. Free variable?
+Variable $makeException not found. Free variable?
+Variable @newDirect not found. Free variable?
+number of renamed_matches = 451 of 213 total variables
+cache size: 6268
+gamma size: 647
+lambdas size: 156
+refs size: 290
+Time not monadic 3.209000 sec
+Total: 186336
+TIncl: 1955
+Incl: 3143
+PIncl: 5657
+OpIncl: 543
+RecordIncl: 316
+Impl: 174232
+RIncl: 175
+LIncl: 315
+pizza
+inserted 10000 of 186336 constraints
+inserted 20000 of 186336 constraints
+inserted 30000 of 186336 constraints
+inserted 40000 of 186336 constraints
+inserted 50000 of 186336 constraints
+inserted 60000 of 186336 constraints
+inserted 70000 of 186336 constraints
+inserted 80000 of 186336 constraints
+inserted 90000 of 186336 constraints
+inserted 100000 of 186336 constraints
+inserted 110000 of 186336 constraints
+inserted 120000 of 186336 constraints
+inserted 130000 of 186336 constraints
+inserted 140000 of 186336 constraints
+inserted 150000 of 186336 constraints
+inserted 160000 of 186336 constraints
+inserted 170000 of 186336 constraints
+inserted 180000 of 186336 constraints
+resolvng: 0 elements
+1000: remaining 1384 elements in 0.000000
+2000: remaining 1229 elements in 0.177000
+3000: remaining 890 elements in 0.364000
+4000: remaining 462 elements in 0.159000
+5000: remaining 280 elements in 0.131000
+'undefined'
+6000: remaining 328 elements in 0.120000
+'0'
+'undefined'
+7000: remaining 254 elements in 0.087000
+''
+'0'
+'undefined'
+'*'
+8000: remaining 261 elements in 0.163000
+''
+','
+'0'
+'undefined'
+'*'
+9000: remaining 274 elements in 0.708000
+10000: remaining 255 elements in 0.410000
+''
+','
+'0'
+'Boolean'
+'Number'
+'String'
+'undefined'
+'*'
+11000: remaining 307 elements in 1.418000
+''
+','
+'0'
+'Boolean'
+'Number'
+'Object'
+'String'
+'false'
+'function Array() {\n    [native code]\n}'
+'true'
+'undefined'
+'*'
+'0*'
+12000: remaining 559 elements in 7.878000
+''
+','
+'0'
+'Boolean'
+'Number'
+'Object'
+'String'
+'false'
+'function Array() {\n    [native code]\n}'
+'true'
+'undefined'
+'*'
+'0*'
+'undefined*'
+13000: remaining 506 elements in 10.280000
+14000: remaining 828 elements in 15.937000
+''
+','
+'0'
+'Boolean'
+'Number'
+'Object'
+'String'
+'TODO: String.prototype.charAt'
+'TODO: String.prototype.charCodeAt'
+'TODO: String.prototype.concat'
+'TODO: String.prototype.indexOf'
+'TODO: String.prototype.lastIndexOf'
+'TODO: String.prototype.localeCompare'
+'TODO: String.prototype.search'
+'TODO: String.prototype.slice'
+'TODO: String.prototype.substring'
+'TODO: String.prototype.toLocaleLowerCase'
+'TODO: String.prototype.toLocaleUpperCase'
+'TODO: String.prototype.toLowerCase'
+'TODO: String.prototype.toUpperCase'
+'false'
+'function Array() {\n    [native code]\n}'
+'global'
+'true'
+'undefined'
+'*'
+',*'
+'0*'
+'undefined*'
+15000: remaining 617 elements in 55.319000
