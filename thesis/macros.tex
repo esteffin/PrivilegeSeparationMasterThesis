@@ -1,0 +1,150 @@
+% basics
+\newcommand{\names}{\mathcal{N}}
+\newcommand{\vars}{\mathcal{V}}
+\newcommand{\perms}{\mathcal{P}}
+\newcommand{\refs}{\mathcal{R}}
+\newcommand{\caller}{\mathbf{caller}}
+
+\renewcommand{\vec}[1]{\overrightarrow{#1}}
+\newcommand{\subst}[2]{[#1/#2]}
+\newcommand{\xra}[1]{\xrightarrow{#1}}
+\newcommand{\xRa}[1]{\xRightarrow{#1}}
+\newcommand{\hra}{\hookrightarrow}
+\newcommand{\fv}{\mathit{fv}}
+\newcommand{\fn}{\mathit{fn}}
+\newcommand{\fnfv}{\mathit{fnfv}}
+\newcommand{\map}[3]{#1 \stackrel{#2}{\mapsto} #3}
+\newcommand{\dom}{\mathit{dom}}
+\newcommand{\defined}[1]{#1\!\downarrow\ }
+
+\newcommand{\powerset}[1]{2^{#1}}
+
+\newenvironment{mcases}[0]{\begin{list}{{\em Case}}{\leftmargin 5pt}}{\end{list}}
+
+% permission
+\newcommand{\join}{\sqcup}
+\newcommand{\meet}{\sqcap}
+\newcommand{\compl}[1]{#1^*}
+
+% values
+\newcommand{\lam}[2]{\lambda #1.#2}
+\newcommand{\rec}[1]{\{#1\}}
+\newcommand{\unit}{\mathbf{unit}}
+\newcommand{\true}{\mathbf{true}}
+\newcommand{\false}{\mathbf{false}}
+\newcommand{\str}[1]{``\mathit{#1}''}
+\newcommand{\undef}{\mathbf{undefined}}
+
+% expressions
+\newcommand{\letexpr}[3]{\mathbf{let}\ #1 = #2\ \mathbf{in}\ #3}
+\newcommand{\appl}[2]{#1\, #2}
+\newcommand{\op}{\mathit{op}}
+\newcommand{\cond}[3]{\mathbf{if}\ (#1)\ \{\ #2\ \}\ \mathbf{else}\ \{\ #3\ \}}
+\newcommand{\while}[2]{\mathbf{while}\ (#1)\ \{\ #2\ \}}
+\newcommand{\lookup}[2]{#1[#2]}
+\newcommand{\store}[3]{#1[#2] = #3}
+\newcommand{\delete}[2]{\mathbf{delete}\ #1[#2]}
+\newcommand{\err}{\mathbf{err}}
+\newcommand{\newref}[2]{\mathbf{ref}_{#1}\ #2}
+\newcommand{\deref}[1]{\mathbf{deref}\ #1}
+\newcommand{\setref}[2]{#1 = #2}
+\newcommand{\send}[3]{\overline{#1} \langle #2 \triangleright #3 \rangle}
+\newcommand{\checkperms}[2]{\mathbf{check}(#1,#2)}
+\newcommand{\acquire}[1]{\mathbf{acquire}(#1)}
+\newcommand{\release}[1]{\mathbf{release}(#1)}
+\newcommand{\register}[3]{\mathbf{register}(#1,#2,#3)}
+\newcommand{\exercise}[1]{\raisebox{1pt}{\scriptsize$\gg$}\,#1}
+\newcommand{\self}{\mathbf{self}}
+
+\newcommand{\match}[2]{\mathbf{match}\ #1\ \mathbf{with}\ \{#2\}}
+\newcommand{\checkp}[3]{\mathbf{check}(#1)\ \mathbf{then}\ #2\ \mathbf{else}\ #3}
+
+% components, systems and states
+\newcommand{\handler}[5]{#1(#2 \triangleleft #3:#5).#4}
+\newcommand{\inst}[3]{#1\{\!|#2|\!\}_{#3}}
+\newcommand{\para}[2]{#1 \parallel #2}
+\newcommand{\sys}[3]{#1;#2;#3}
+
+\newcommand{\ctx}[2]{#1\langle #2\rangle}
+\newcommand{\labcall}[4]{\langle #1@#2,#3@#4 \rangle}%{\langle #1,#2,#3,#4 \rangle}
+\newcommand{\labex}[3]{#1@#2 \gg #3}
+
+% misc
+\newcommand{\lambdaJS}{\lambda_{\mathsf{JS}}}
+\newcommand{\irule}[1]{({\sc #1})}
+
+% flow logic
+\newcommand{\labs}{{\mathcal L}}
+\newcommand{\absenv}{\hat{\Gamma}}
+\newcommand{\absflow}{\hat{\phi}}
+\newcommand{\absnet}{\hat{\Phi}}
+\newcommand{\absvalues}{\hat{V}}
+\newcommand{\absmem}{\hat{\mu}}
+\newcommand{\abscache}{\hat{\Phi}}
+\newcommand{\absassert}{\hat{L}}
+\newcommand{\forms}{\Phi}
+\newcommand{\terms}{\mathcal{T}}
+
+\newcommand{\absop}{\widehat{\op}}
+\newcommand{\abseq}{\widehat{eq}}
+\newcommand{\absget}{\widehat{get}}
+\newcommand{\absset}{\widehat{set}}
+\newcommand{\absdel}{\widehat{del}}
+
+\newcommand{\dontcare}{\diamond}
+\newcommand{\abscaller}{\widehat{\caller}}
+\newcommand{\msg}{\mathbb{M}}
+\newcommand{\abself}{\widehat{\self}}
+\newcommand{\absform}[1]{\langle #1 \rangle}
+\newcommand{\hasperm}[2]{#1\ \mathsf{has}\ #2}
+\newcommand{\ltrue}{\mathsf{true}}
+\newcommand{\lacquire}[3]{#1 \uparrow #2,#3}
+\newcommand{\lrelease}[3]{#1 \downarrow #2,#3}
+\newcommand{\abstrue}{\widehat{\true}}
+\newcommand{\absfalse}{\widehat{\false}}
+\newcommand{\absunit}{\widehat{\unit}}
+\newcommand{\absundef}{\widehat{\undef}}
+
+\newcommand{\absC}{{\cal C}}
+
+% types
+\newcommand{\Base}{\mathsf{Base}}
+\newcommand{\escal}[2]{#1 \rightsquigarrow #2}
+\newcommand{\funT}[3]{#1\to #2 :: #3}
+\newcommand{\chanT}[3]{#1\triangleleft #2 :: #3}
+\newcommand{\refT}[2]{\mathsf{Ref}_{#2}(#1)}
+\newcommand{\expT}[2]{#1 :: #2}
+
+\newcommand{\gv}{\Gamma\vdash}
+\newcommand{\gvs}{\Gamma\vdash_{\rho_s}}
+
+\newcommand{\MsgPriv}[3]{\bigoplus_{#3} #1 > #2}
+\newcommand{\obranch}{\,\oplus\,}
+
+% debundling
+\newcommand{\avail}[1]{\mathit{Avail}_{#1}}
+\newcommand{\req}[1]{\mathit{Req}_{#1}}
+\newcommand{\psubst}[3]{[#1/#2]@#3}
+\newcommand{\unbundle}[3]{#1 \rhd_{#2}\, #3}
+
+% escalation
+\newcommand{\abstack}{\hat{\Upsilon}}
+\newcommand{\escalate}[1]{\,\gg #1}
+\newcommand{\despite}[1]{\ \mathbf{despite}\ #1}
+\newcommand{\permsleak}[1]{\mathit{Leak}_{#1}}
+
+%other mine
+\newcommand{\vat}[0]{\hat{v}}
+\newcommand{\Cat}[0]{\hat{C}}
+\newcommand{\muat}[0]{\hat{\mu}}
+\newcommand{\Env}[0]{\hat{\Gamma}}
+\newcommand{\Pat}[0]{\hat{P}}
+\newcommand{\modelrho}{\models_{\rho_s}}
+\newcommand{\aenvs}{(\Env,\muat)}
+\newcommand{\caesti}[2]{\aenvs \modelrho #1 : \vat_{#2} \gg \rho_{#2}}
+\newcommand{\caest}[1]{\aenvs \modelrho #1 : \vat \gg \rho}
+\newcommand{\cenvs}{(\Cat,\Env,\muat,\Pat)}
+\newcommand{\ccest}[1]{\cenvs \models_{c \rho_s} #1}
+\newcommand{\ccestl}[1]{\cenvs \models_{c \rho_s} {(#1)}^{\ell}}
+\newcommand{\lbt}[1]{{e_#1}^{\ell_#1}}
+\newcommand{\letexprs}[3]{\mathbf{let}\ \vec{#1 = #2}\ \mathbf{in}\ #3}
