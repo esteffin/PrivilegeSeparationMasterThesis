@@ -1,4 +1,4 @@
-\documentclass[12pt,a4paper,twoside,openright,draft]{thesis}
+\documentclass[12pt,a4paper,twoside,openright,draft]{report} %thesis
 
 \usepackage[latin1]{inputenc}
 \usepackage[english]{babel}
@@ -43,7 +43,7 @@
 \makeindex
 
 \begin{document}
-
+%\frontmatter
 
 \maketitle
 
@@ -52,6 +52,8 @@
 \end{abstract}
 
 \tableofcontents
+
+%\mainmatter
 
 \chapter{Motivation}
 \input{motivation}
@@ -80,5 +82,15 @@
 \chapter{Conclusion}
 \input{conclusion}
 \label{sec:Conclusion}
+
+\newpage
+\cite{*}
+\cite{FlowLogic}
+\newpage
+%\backmatter
+%\chapter{Bibliography}
+
+\bibliographystyle{plain}
+\bibliography{bibliography}
 
 \end{document}
