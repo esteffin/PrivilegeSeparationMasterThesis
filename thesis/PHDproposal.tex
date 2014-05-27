@@ -1,0 +1,28 @@
+\documentclass[10pt,a4paper,draft]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\author{Enrico Steffinlongo}
+\title{PHD research proposal}
+
+\AtBeginDocument{\renewcommand{\bibname}{References}}
+
+\begin{document}
+\maketitle
+\section{Background}
+In many application we have a typical scenario where the software have to interact with many elements that can be both sensitive or untrusted. This can be very dangerous because an attacker coming from the untrused outer world pose very harmful threat to the sensitive elements treated by the program. To avoid this, is often used a privilege separated architecture that divide the application in various components giving to each component only limited permission and makes the communication of the various component using a Message Passing Interface. To avoid privilege escalation attacks, where a component compromised by an attacker can obtain permission that it doesn't has originally, usually the permission are given statically before the execution of the application. Moreover, according to the permission system, there is a strict punctual mapping between components and permission in order to reduce the possible exploits of the attacker.\\
+To maintain full functionality, the components can communicate via message passing in order to exchange information and such channel between components could be centralized or distributed and can pass different kind of messages: from simple strings to complex object with pointer and methods. Even this message passing, is an attack surface because it lead to privilege escalation attacks. In fact a compromised component can send messages asking to another for the execution of a privilege that is requested by the attacker.\\
+These choice, as said, are used in a lot of different system architecture such for example in Android each application has a limited set of permission that are given statically and it can communicate with other apps using a IPC message passing interface. As discussed in \cite{AndroidMPI,AndroidPermissions,AndroidPermission,AndroidPrivilegeEscalation,AndroidRedelegation} even this architecture suffers various attacks like privilege escalation. Moreover sometime applications that are written by programmers that are not security experts can expose a large attack surface since they can be over privileged or they cal leak some capability for example not checking properly the inbound messages.\\
+Another case of Privilege separated architecture that uses a simple Message passing interfaces is the Google Chrome Extension framework. In this architecture, used to extend functionality of the browser, as shown in \cite{ChromeExtSpec,ChromeExtSpecSnd}, the choice is to separate every app in two sets of components: Backgrounds that is the part of the application that interact with sensible data as password, cookies and with the browser core and it is isolated from the page on which the extension is running and the Content Scripts that has no permission except the one used to send messages to the Background. They have access to the page on which they are injected. Moreover to avoid delegation of privilege, messages can only be strings. This restrict the attack surface indeed an attacker can't send function to be executed in the privileged Background environment, but reduce also the control on messages so an infected Content Script can send arbitrary messages to the Background that not ever is able to understand if a message is benign or not.
+
+This architecture unfortunately suffer several limitations that affects both functional and non functional requirements. For example since permission are given statically often the programmer tends to give to each component the maximum of the permission required even if a certain privilege is used very rarely. Some architecture (e.g. Chrome Extension \cite{ChromeExtensionOnline}) mitigate this behavior letting the user to request and release permission dynamically up to an upper bound that is given statically. Another problem of such architecture is that restricting too much the kind of messages (e.g. Chrome Extension) to avoid injection of code can limit the expressiveness of Object oriented programming paradigm.
+
+\section{Proposal}
+In this scenario interesting research could examine deeper 
+
+
+\bibliographystyle{plain}
+\bibliography{bibliography}
+\end{document}
