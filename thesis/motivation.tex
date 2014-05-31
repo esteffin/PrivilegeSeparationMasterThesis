@@ -7,7 +7,9 @@
 
 \section{Chrome extension architecture overview}
 \label{sec:ExtOverview}
-Web browser in the last decade experienced a massive increment of usage. Such increment, combined 
+Chrome by Google, as all actual-days browsers, provides a powerful extension framework. This gives to developers a huge architecture made explicitly to extend the core browser potentiality in order to build small programs that enhance user-experience. In Chrome web store there are a lot of extensions with very various behaviors like security enhancers, theme changers, organizers or other utilities, multimedia visualizer, games and others. For example, AdBlock is an extension made to block all ads on websites; ShareMeNot "protects the user against being tracked from third-party social media buttons while still allowing it to use them"\cite{ShareMeNot}. As we can notice extensions have different purposes, and many of them has to interact with web pages. This creates a very large attack surface for attackers and is a big threat for the user. Moreover many extensions are written by developers that are not security experts so, even if their behavior is not malign, the bugs that can appear in them can be easily exploited by attackers.
+
+Google Chrome extension architecture adopt a composition of the privilege-separated approach. As deeply discussed in \cite{ChromeExtSpec} the actual Google Chrome extension framework is based on privilege separation, least privilege and strong isolation. 
 
 \section{Chrome extension architecture weaknesses}
 \label{sec:ExtWeakness}

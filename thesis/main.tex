@@ -42,6 +42,8 @@
 
 \makeindex
 
+\AtBeginDocument{\renewcommand{\bibname}{References}}
+
 \begin{document}
 %\frontmatter
 
@@ -84,10 +86,11 @@
 
 \newpage
 %\cite{*}
+
 \cite{FlowLogic}
+
 \newpage
 %\backmatter
-%\chapter{Bibliography}
 
 \bibliographystyle{plain}
 \bibliography{bibliography}

@@ -22,20 +22,15 @@
  publisher = {USENIX Association},
  address = {Berkeley, CA, USA},
 }
-@incollection{FlowLogic,
-year={2002},
-isbn={978-3-540-00326-7},
-booktitle={The Essence of Computation},
-volume={2566},
-series={Lecture Notes in Computer Science},
-editor={Mogensen, TorbenÆ. and Schmidt, DavidA. and Sudborough, I.Hal},
-doi={10.1007/3-540-36377-7_11},
-title={Flow Logic: A Multi-paradigmatic Approach to Static Analysis},
-url={http://dx.doi.org/10.1007/3-540-36377-7_11},
-publisher={Springer Berlin Heidelberg},
-author={Nielson, HanneRiis and Nielson, Flemming},
-pages={223-244},
-language={English}
+@inproceedings{FlowLogic,
+  author    = {Hanne Riis Nielson and
+               Flemming Nielson},
+  title     = {Flow Logic: A Multi-paradigmatic Approach to Static Analysis},
+  booktitle = {The Essence of Computation},
+  year      = {2002},
+  pages     = {223-244},
+  ee        = {http://dx.doi.org/10.1007/3-540-36377-7_11},
+  bibsource = {DBLP, http://dblp.uni-trier.de}
 }
 @inproceedings{LambdaJS,
  author = {Guha, Arjun and Saftoiu, Claudiu and Krishnamurthi, Shriram},
@@ -129,11 +124,12 @@ language={English}
   institution={SECSAFE-IMM-004-1.0}
 }
 @techreport{CarmelFlowLogicFormalization,
-    author = {Rene Rydhof Hansen},
-    title = {Flow Logic for Carmel},
-    institution = {},
-    year = {2002}
-}@inproceedings{AndroidPermission,
+  title={Flow logic for carmel},
+  author={Hansen, Ren{\'e} Rydhof},
+  year={2002},
+  institution={Citeseer}
+}
+@inproceedings{AndroidPermission,
  author = {Felt, Adrienne Porter and Chin, Erika and Hanna, Steve and Song, Dawn and Wagner, David},
  title = {Android Permissions Demystified},
  booktitle = {Proceedings of the 18th ACM Conference on Computer and Communications Security},
@@ -182,23 +178,6 @@ language={English}
  publisher = {Springer-Verlag},
  address = {Berlin, Heidelberg},
 }
-@inproceedings{AndroidPermissions,
- author = {Felt, Adrienne Porter and Chin, Erika and Hanna, Steve and Song, Dawn and Wagner, David},
- title = {Android Permissions Demystified},
- booktitle = {Proceedings of the 18th ACM Conference on Computer and Communications Security},
- series = {CCS '11},
- year = {2011},
- isbn = {978-1-4503-0948-6},
- location = {Chicago, Illinois, USA},
- pages = {627--638},
- numpages = {12},
- url = {http://doi.acm.org/10.1145/2046707.2046779},
- doi = {10.1145/2046707.2046779},
- acmid = {2046779},
- publisher = {ACM},
- address = {New York, NY, USA},
- keywords = {android, least privilege, permissions},
-}
 @INPROCEEDINGS{AndroidRedelegation,
     author = {Adrienne Porter Felt and Steven Hanna and Erika Chin and Helen J. Wang and Er Moshchuk},
     title = {Permission re-delegation: Attacks and defenses},
@@ -239,6 +218,12 @@ month = may,
 year = {2014},
 url = {https://developer.chrome.com/extensions/overview}
 }
+@misc{ShareMeNot,
+title = {Share me not extension\\http://sharemenot.cs.washington.edu/},
+month = may,
+year  = {2014},
+url   = {http://sharemenot.cs.washington.edu/}
+}
 @article{LambdaJSMightVanHorn,
   author    = {David Van Horn and
                Matthew Might},
@@ -249,5 +234,31 @@ url = {https://developer.chrome.com/extensions/overview}
   ee        = {http://arxiv.org/abs/1109.4467},
   bibsource = {DBLP, http://dblp.uni-trier.de}
 }
-
-
+@inproceedings{TAJS,
+ author = {Jensen, Simon Holm and M{\o}ller, Anders and Thiemann, Peter},
+ title = {Type Analysis for JavaScript},
+ booktitle = {Proceedings of the 16th International Symposium on Static Analysis},
+ series = {SAS '09},
+ year = {2009},
+ isbn = {978-3-642-03236-3},
+ location = {Los Angeles, CA},
+ pages = {238--255},
+ numpages = {18},
+ url = {http://dx.doi.org/10.1007/978-3-642-03237-0_17},
+ doi = {10.1007/978-3-642-03237-0_17},
+ acmid = {1615460},
+ publisher = {Springer-Verlag},
+ address = {Berlin, Heidelberg},
+}
+@inproceedings{TAJSDOM,
+  author    = {Simon Holm Jensen and
+               Magnus Madsen and
+               Anders M{\o}ller},
+  title     = {Modeling the HTML DOM and browser API in static analysis
+               of JavaScript web applications},
+  booktitle = {SIGSOFT FSE},
+  year      = {2011},
+  pages     = {59-69},
+  ee        = {http://doi.acm.org/10.1145/2025113.2025125},
+  bibsource = {DBLP, http://dblp.uni-trier.de}
+}
