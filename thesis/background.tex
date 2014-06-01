@@ -1,5 +1,67 @@
 \section{Chrome extension architecture details}
 \label{sec:ExtDetails}
+As showed in \cite{ChromeExtensionOnline} a Chrome Extension is an archive containing files of various kind like JavaScript, HTML, JSON, pages, images and other that extends the browser features.
+
+A basic extension contains a manifest file and one or more Javascript or Html files.
+
+\subsection{Manifest}
+The manifest file \texttt{manifest.json} is a JSON-formatted file that with all the specification of the extension. It is the entry point of the extension and contain two mandatory fields: \texttt{name} and \texttt{version} containing the name and the version of the extension. Other important field are \texttt{background}, \texttt{content\_scripts}, \texttt{permissions} and we will explain here.
+\begin{itemize}
+\item \texttt{background}: has or a \texttt{script} field containing the source of the content script or a \texttt{page} field containing the source of an HTML page. If the \texttt{script} field is used the scripts are injected in a empty page, while if is used \texttt{page} the HTML document with all his elements, including scripts, compose the background.
+\item \texttt{content\_scripts}: contains a list of content script objects. A content script object can contains field \texttt{js} that contain the list of  Javascript files to be injected and other, and must contain field \texttt{matches}: a list of match patterns. Match patterns are explained below.
+\item \texttt{permissions}: contains a list of privileges that are requested by the extension. These can be either a host match pattern for XHR request to that host or the name of the API needed.
+\end{itemize}
+
+Another possible field is \texttt{optional\_permissions}. It contains the list of optional permission that the extension could require and are used to restrict the privilege granted to the app. To use one of this permissions the background page has to require explicitly them and to release after use. Using the optional permission is possible to reduce the possible privileges escalated by an attacker, \textbf{but are used rarely and are not in our interest}\todo{Togliere?}.
+
+A match pattern is a string composed of three parts: \texttt{scheme}, \texttt{host} and \texttt{path}. A part can contains a value or \texttt{"*"} that means all possible values. In table \ref{tab:URLPatSyn} is shown the syntax of the URL patterns. For more details refer to \cite{ChromeExtensionMatch}. As we can see we can decide to inject some content scripts on pages derived from a given match. This is used when the extension has to interact with only certain pages. For example \texttt{"*://*/*"} means all pages; \texttt{"https://*/*"} means all HTTPS pages; \texttt{"https://*.google.com/*"} means all HTTPS pages with google as host and with all path (e.g., \texttt{mail.google.com}, \texttt{www.google.com}, \texttt{docs.google.com/mine}).
+
+\begin{table}[tlb]
+\begin{verbatim}
+<url-pattern> := <scheme>://<host><path>
+<scheme> := '*' | 'http' | 'https' | 'file' | 'ftp' | 'chrome-extension'
+<host> := '*' | '*.' <any char except '/' and '*'>+
+<path> := '/' <any chars>
+\end{verbatim}
+\caption{Url pattern syntax. Table taken from \cite{ChromeExtensionMatch}}
+\label{tab:URLPatSyn}
+\end{table}
+
+In table \ref{src:AManifest} we can see a manifest of a simple Chrome extension that expands the feature of moodle. We can see that the extension has an empty background page on which is injected the file \texttt{background.js} an that has tabs, downloads permission and that can execute XHR to all path contained in \texttt{https://moodle.dsi.unive.it/}. It has also one content script that is injected in all subpages of \texttt{https://moodle.dsi.unive.it/}.
+\begin{table}[tlb]
+\lstset{language=java,showstringspaces=false}
+\begin{small}
+\begin{lstlisting}
+{
+	"manifest_version": 2,
+	"name":"Moodle expander",
+	"description":"Download homework and uploads marks from a JSON string",
+	"version":"1",
+	"background": { "scripts": ["background.js"] },
+	"permissions":  
+		[
+			"tabs",
+			"downloads",
+			"https://moodle.dsi.unive.it/*"
+		],
+	"content_scripts": 
+		[
+			{
+				"matches": ["https://moodle.dsi.unive.it/*"],
+				"js": ["myscript.js"]
+			}
+		]
+}
+\end{lstlisting}
+\end{small}
+\caption{A manifest file}
+\label{src:AManifest}
+\end{table}
+
+\subsection{Content script}
+Content scripts are a list
+
+\subsection{Background}
 
 \section{Flow logic}
 \label{sec:FlowLogic}
