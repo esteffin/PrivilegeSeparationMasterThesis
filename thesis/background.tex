@@ -7,7 +7,7 @@ A basic extension contains a manifest file and one or more Javascript or Html fi
 \subsection{Manifest}
 The manifest file \texttt{manifest.json} is a JSON-formatted file that with all the specification of the extension. It is the entry point of the extension and contain two mandatory fields: \texttt{name} and \texttt{version} containing the name and the version of the extension. Other important field are \texttt{background}, \texttt{content\_scripts}, \texttt{permissions} and we will explain here.
 \begin{itemize}
-\item \texttt{background}: has or a \texttt{script} field containing the source of the content script or a \texttt{page} field containing the source of an HTML page. If the \texttt{script} field is used the scripts are injected in a empty page, while if is used \texttt{page} the HTML document with all his elements, including scripts, compose the background.
+\item \texttt{background}: has or a \texttt{script} field containing the source of the content script or a \texttt{page} field containing the source of an HTML page. If the \texttt{script} field is used the scripts are injected in a empty extension core page, while if is used \texttt{page} the HTML document with all his elements, including scripts, compose the extension core.
 \item \texttt{content\_scripts}: contains a list of content script objects. A content script object can contains field \texttt{js} that contain the list of  Javascript files to be injected and other, and must contain field \texttt{matches}: a list of match patterns. Match patterns are explained below.
 \item \texttt{permissions}: contains a list of privileges that are requested by the extension. These can be either a host match pattern for XHR request to that host or the name of the API needed.
 \end{itemize}
@@ -59,9 +59,96 @@ In table \ref{src:AManifest} we can see a manifest of a simple Chrome extension 
 \end{table}
 
 \subsection{Content script}
-Content scripts are a list
+Content script are Javascript source files that are automatically injected to the web page if this match with the pattern defined in the manifest. In the example of table \ref{tab:URLPatSyn} the file \texttt{myscript.js} is injected to all sub-pages of \texttt{https://moodle.dsi.unive.it/}. In the extension framework content scripts are designed to interact with the page. Since this interaction could be the entry point for an attacker, content scripts have no permissions except the one used to communicate with the extension core. In order to reduce injection of code in the content script from a malign page, there is a strong isolation between the heaps of these two. Content scripts of same extension are run together in their own address space, and the only way they have to interact with the page is via DOM API. As explained in \cite{ChromeExtSpec} browser provide one common DOM element accessed via its API and all scripts both on the page or in the extension can modify it, but only changes of the standard DOM properties are shared, while other changes are kept locally. \todo{mettere figura dell'articolo?}
 
-\subsection{Background}
+The message passing interface has crucial importance in this work since it is the only way for a content script to trigger execution of a privilege. We will discuss it later in \ref{subs:MPI}.
+
+\subsection{Extension core}
+The extension core is the most critical part of the application. It is executed in a unique origin like \texttt{chrome-extension://hcdmlbjlcojpbbinplfgbjodclfijhce} in order to prevent cross origin attacks, but can communicate with all origins that match with one of the host permission requested. In this environment are executed all scripts defined in the background field of the manifest. Since background pages can have remote object, they can also request to the web such resources, but this can be very dangerous because if the resources are on simple HTTP connections them can be altered by an attacker. In \cite{ChromeExtSpecSnd} is described how to enforce the security policy in order to avoid such possible weakness. As already said background pages can interact with content scripts via message passing.
+
+\subsection{Message passing API}
+\label{subs:MPI}
+Every content script of the extension can access \texttt{chrome.runtime} that is the object on wich the message passing interface is implemented(for more details refer to \cite{ChromeExtensionRuntime}). 
+
+The main method to send a message to the extension core is invoking the method \texttt{chrome.runtime.sendMessage}. Like all Chrome APIs even the message passing is asynchronous. As primary arguments it takes the message that can be of any kind and a callback function that is triggered if someone answer to the message. The message, before sending is marshaled using a JSON serializer. This prevent exchange of pointers or of functions, but limits the expressiveness of the prototype-based object-oriented feature of Javascript. It also fails in presence of recursive objects.
+
+An element, to listen to inbound messages, has to register a function on the \texttt{chrome.runtime.onMessage} event. This function will be triggered when a message arrives. Its arguments are the message (unmarshalled by the API), the sender and an optional callback used to send response to that message. The sender field is very important because is the only warranty about the sender. In fact the message may not be used to decide the sender, because it can be of every kind.
+
+Since content scripts are multiple and injected in various pages (tabs), the extension core for sending a message has to use the \texttt{sendMessage} method proper of the \texttt{tab} object to which the message has to be sent. Its behavior is the same of the \texttt{chrome.runtime.sendMessage} method.
+
+In table \ref{tab:MPIMessage} we can see how to use the simple message passing interface. A component simply sends the message and wait for a response. The other register \texttt{onMessage} function as event listener for messages. When it is triggered by an incoming message \texttt{onMessage} check the message and decide to compute something with the request or to refuse the message. Unfortunately this practice is very dangerous because there are no warranties on the source of the message inside it, so an attacker can sends false messages that trigger security sensitive computation with untrusted source.
+
+Another way to communicate, that is more secure, is done using a channel as in table \ref{tab:MPIPort}. In the message passing API there is a method called \texttt{connect} that takes as optional arguments a message to deliver  when the corresponding event \texttt{onConnect} is triggered and that returns a port. Such object is a bidirectional channel that can be used to communicate and contains the methods \texttt{postMessage}, \texttt{disconnect} and the events \texttt{onMessage} and \texttt{onDisconnect}. Communication using ports instead of the classical \texttt{chrome.runtime.sendMessage} is more secure, because only who has the port endpoints can communicate. This grants the sender of the message.
+
+\lstset{language=java,showstringspaces=false}
+\begin{table}
+\begin{small}
+\begin{tabular}{p{0.45\linewidth} | p{0.45\linewidth}}
+Sender & Receiver\\
+\hline
+\begin{lstlisting} 
+var info = "hello";
+var callback = 
+	function(response) 
+	{ 
+		console.log("get response: " + response);
+	};
+chrome.runtime.sendMessage(info, callback);
+\end{lstlisting}&
+\begin{lstlisting} 
+var onMessage = 
+	function(message, sender, sendResponse) 
+	{ 
+		if (message = "hello") 
+		{
+		    //compute message
+			sendResponse("hi");
+		}
+		else 
+			console.log("connection refused from"+sender);
+	};
+chrome.runtime.onMessage.addListener(onMessage);
+\end{lstlisting}\\
+\end{tabular}
+\end{small}
+\caption{Sending a message.}
+\label{tab:MPIMessage}
+\end{table}
+
+\begin{table}
+\begin{small}
+\begin{tabular}{p{0.45\linewidth} | p{0.45\linewidth}}
+Port opening active & Port opening passive\\
+\hline
+\begin{lstlisting} 
+var port = chrome.runtime.connect({name: "cs1"});
+port.onMessage.addListener(onMessage)
+port.postMessage("hi")
+\end{lstlisting}&
+\begin{lstlisting} 
+var scriptPort = null;
+var onConnect = 
+	function(port) 
+	{ 
+		if (port.name = "cs1") 
+		{
+			scriptPort = port;
+			port.onMessage.addListener(onMessage);
+		} 
+		else 
+		{
+			console.log("connection refused"); 
+			port.disconnect();
+		}
+	};
+chrome.runtime.onConnect.addListener(onConnect)
+\end{lstlisting}\\
+\end{tabular}
+\end{small}
+\caption{Port creation.}
+\label{tab:MPIPort}
+\end{table}
+
 
 \section{Flow logic}
 \label{sec:FlowLogic}
