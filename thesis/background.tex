@@ -68,7 +68,7 @@ The extension core is the most critical part of the application. It is executed 
 
 \subsection{Message passing API}
 \label{subs:MPI}
-Every content script of the extension can access \texttt{chrome.runtime} that is the object on wich the message passing interface is implemented(for more details refer to \cite{ChromeExtensionRuntime}). 
+Every content script of the extension can access \texttt{chrome.runtime} that is the object on wich the message passing interface is implemented (for more details refer to \cite{ChromeExtensionRuntime}). 
 
 The main method to send a message to the extension core is invoking the method \texttt{chrome.runtime.sendMessage}. Like all Chrome APIs even the message passing is asynchronous. As primary arguments it takes the message that can be of any kind and a callback function that is triggered if someone answer to the message. The message, before sending is marshaled using a JSON serializer. This prevent exchange of pointers or of functions, but limits the expressiveness of the prototype-based object-oriented feature of Javascript. It also fails in presence of recursive objects.
 
@@ -76,13 +76,14 @@ An element, to listen to inbound messages, has to register a function on the \te
 
 Since content scripts are multiple and injected in various pages (tabs), the extension core for sending a message has to use the \texttt{sendMessage} method proper of the \texttt{tab} object to which the message has to be sent. Its behavior is the same of the \texttt{chrome.runtime.sendMessage} method.
 
-In table \ref{tab:MPIMessage} we can see how to use the simple message passing interface. A component simply sends the message and wait for a response. The other register \texttt{onMessage} function as event listener for messages. When it is triggered by an incoming message \texttt{onMessage} check the message and decide to compute something with the request or to refuse the message. Unfortunately this practice is very dangerous because there are no warranties on the source of the message inside it, so an attacker can sends false messages that trigger security sensitive computation with untrusted source.
+In table \ref{tab:MPIMessage} we can see how to use the simple message passing interface. A component simply sends the message and wait for a response. The other register \texttt{onMessage} function as event listener for messages. When it is triggered by an incoming message \texttt{onMessage} check the message and decide to compute something according to the request or to refuse the message.
 
 Another way to communicate, that is more secure, is done using a channel as in table \ref{tab:MPIPort}. In the message passing API there is a method called \texttt{connect} that takes as optional arguments a message to deliver  when the corresponding event \texttt{onConnect} is triggered and that returns a port. Such object is a bidirectional channel that can be used to communicate and contains the methods \texttt{postMessage}, \texttt{disconnect} and the events \texttt{onMessage} and \texttt{onDisconnect}. Communication using ports instead of the classical \texttt{chrome.runtime.sendMessage} is more secure, because only who has the port endpoints can communicate. This grants the sender of the message.
 
 \lstset{language=java,showstringspaces=false}
-\begin{table}
+\begin{table}[tlb]
 \begin{small}
+\begin{center}
 \begin{tabular}{p{0.45\linewidth} | p{0.45\linewidth}}
 Sender & Receiver\\
 \hline
@@ -110,6 +111,7 @@ var onMessage =
 chrome.runtime.onMessage.addListener(onMessage);
 \end{lstlisting}\\
 \end{tabular}
+\end{center}
 \end{small}
 \caption{Sending a message.}
 \label{tab:MPIMessage}
@@ -117,6 +119,7 @@ chrome.runtime.onMessage.addListener(onMessage);
 
 \begin{table}
 \begin{small}
+\begin{center}
 \begin{tabular}{p{0.45\linewidth} | p{0.45\linewidth}}
 Port opening active & Port opening passive\\
 \hline
@@ -144,11 +147,108 @@ var onConnect =
 chrome.runtime.onConnect.addListener(onConnect)
 \end{lstlisting}\\
 \end{tabular}
+\end{center}
 \end{small}
 \caption{Port creation.}
 \label{tab:MPIPort}
 \end{table}
 
+\subsection{Bundling}
+\label{sec:Bundling} 
+\todo{scriviere molto bene questa parte}
+As seen in table \ref{tab:MPIMessage} the choice taken by a component when a message is received can depend on various factors decided by the programmer.
+
+Let us explain the example in \ref{tab:Bundled}: suppose to have three components Background, CS1 and CS2. CS1 can only send messages that has \texttt{"getPasswd"} as title and CS2 only \texttt{"executeXHR"}. Here the Background deduct the sender checking the title of the messages instead of of explicitly checking it, and according to this decide which privilege has to be executed. This practice is called bundling and is very dangerous because an attacker can compromise just one of the two content scripts and from that one can forge messages with any title escalating a permission that he does not have in the original setting.
+
+To avoid such weakness is important to check the sender field of the \texttt{onMessage} function in order to be sure of the sender. This cannot be enough because, as discussed before, contents script that are injected on the same page share their memory, and the message passing interface are does not distinguish them. The fix of this weakness is to use ports instead of the \texttt{chrome.runtime.sendMessage} function in order to have different listener for each content script. In table \ref{tab:UnBundled} is showed an unbundled code.
+
+\begin{table}[tlb]
+\begin{small}
+\begin{center}
+\begin{tabular}{p{0.95\linewidth}}
+Background\\
+\hline
+\begin{lstlisting}
+function onMessage(message, sender, response)
+{    	
+	switch (message.title) {
+		/* Requests from content script 1 */
+		case "getPasswd":
+		// get passwords
+		response(passwd)
+		break;
+		
+		/* Requests from content script 2 */
+		case "executeXHR":
+		var host = message.host
+		var m = message.content;
+		// execute XHR on args
+		break;
+				
+		default:
+		throw "Invalid request from contentScript";
+	}
+}
+\end{lstlisting}\\
+\hline
+\hline
+Content script CS1 \\
+\hline
+\begin{lstlisting}
+var mess = {title: "getPasswd"};
+chrome.runtime.sendMessage(mess);
+\end{lstlisting}\\
+\hline
+\hline
+Content script CS2\\
+\hline
+\begin{lstlisting}
+var mess = {title: "executeXHR", host: "www.google.com", content: "hi there"};
+chrome.runtime.sendMessage(mess);
+\end{lstlisting}\\
+\end{tabular}
+\end{center}
+\end{small}
+\caption{Bundled code.}
+\label{tab:Bundled}
+\end{table}
+\begin{table}[tlb]
+\begin{small}
+\begin{center}
+\begin{tabular}{p{0.95\linewidth}}
+Background\\
+\hline
+\begin{lstlisting}
+function onMessage(message, sender, response)
+{    	
+	switch (sender) {
+		/* Requests from content script 1 */
+		case CS1:
+		// get passwords
+		response(passwd)
+		break;
+		
+		/* Requests from content script 2 */
+		case CS2:
+		var host = message.host
+		var m = message.content;
+		// execute XHR on args
+		break;
+				
+		default:
+		throw "Invalid request from contentScript";
+	}
+}
+\end{lstlisting}\\
+\hline
+\end{tabular}
+\end{center}
+\end{small}
+\caption{Unbundled code.}
+\label{tab:UnBundled}
+\end{table}
 
 \section{Flow logic}
 \label{sec:FlowLogic}
+
+
