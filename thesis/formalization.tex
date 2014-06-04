@@ -1,204 +1,812 @@
-\section{Threat Model}
-\label{sec:ThreatModel}
+This chapter is about the formal part of the work and explain the calculus, the safety property, the analysis specification, theorem and requirements for correctness. It is part of the work done developed together with Stefano Calzavara.
+%calcolo e proprieta' di sicurezza by Stefano
 
 \section{Calculus}
 \label{sec:Calculus}
+In this section we introduce the language used to study privilege escalation. The core of the calculus models Javascript essential features and is a subset of $\lambda_{JS}$. $\lambda_{JS}$ is a Scheme dialect described in \cite{LambdaJS} and studied in \cite{Strobe} and \cite{LambdaJSMightVanHorn} used to desugar Javascript in order to simplify it in few construct with easy semantic behavior. It admit functions, object (i.e., records) and mutable references. Here we are not using exceptions and break statements for the sake of simplicity. On the other hand, specific constructs are added to explicitly deal with privilege-based access control and privilege escalation. We rely on a channel-based communication model based on asynchronous message exchanges and handlers. \todo{modificato un po'}
 
-\section{Safety properties} %proprietà di sicurezza
-\label{sec:SafetyProp}
+\subsection{Syntax}
+We assume denumerable sets of names $\names$ (ranged over by $a,b,m,n$) and variables $\vars$ (ranged over by $x,y,z$). We let $c$ range over constants, including numbers, strings, boolean values, unit and ``undefined''; we also let $r$ range over references in $\refs$, i.e., memory locations. The calculus is parametric with respect to an arbitrary lattice of permissions $(\perms,\sqsubseteq)$ and we let $\rho$ range over $\perms$. Finally, we assume a denumerable set of labels $\labs$ (ranged over by $\ell$) to support our static analysis. All the sets above are assumed pairwise disjoint. \todo{lasciato uguale}
 
-\section{Analysis specification} %specifica dell'analisi
-\label{sec:AnalysisSpec}
-\subsection{Abstract succinct}
+\paragraph*{Values.} 
+We let $u,v$ range over \emph{values}, defined by the following productions:
+\begin{align*}
+c & ::= \mathit{num} ~|~ \mathit{str} ~|~ \mathit{bool} ~|~ \unit ~|~ \undef, \\
+u,v &::= n ~|~ x ~|~ c ~|~ r_{\ell} ~|~ \lam{x}{e} ~|~ \rec{\vec{str_i:v_i}}.
+\end{align*}
+All the forms above are standard. Notice that references bear a label $\ell$, identifying the program point where they are created (see below). This is just needed for our static analysis and plays no role in the semantics. For simplicity, we consider only \emph{closed} record values: this does not involve any loss of expressiveness.\todo{the restriction to closed record values is useful for the substitution lemma and opponent acceptability. the next definition of serializable value is used to prevent functions from being communicated through the message passing interface (cf. R-Sync), which either breaks the substitution lemma or opponent acceptability: that justifies also the more restrictive treatment of references.}
+
+\begin{definition}[Serializable Value]
+\label{def:serializable}
+A value $v$ is \emph{serializable} if and only if:
+\begin{itemize}
+\item $v$ is a name, a constant, or a reference;
+\item $v = \rec{\vec{str_i:v_i}}$ and each $v_i$ is serializable.
+\end{itemize}
+\end{definition}
+
+\paragraph*{Expressions.} 
+We let $e$ range over \emph{expressions}, defined by the following productions:
 \[
-\begin{array}{llcl}
-\mathit{Abstract\ cache} & \Cat & : & \labs \rightarrow \absvalues \\
-\mathit{Abstract\ variable\ environment} & \Env & : & \vars \rightarrow \absvalues \\
-\mathit{Abstract\ memory} & \absmem & : & \labs \times \perms \rightarrow \absvalues \\
-\mathit{Abstract\ permission\ cache} & \Pat & : & \labs \rightarrow \perms \\
+\begin{array}{lcl}
+e,f & ::= & v ~|~ \letexpr{x}{e}{e} ~|~ \appl{e}{e} ~|~ \op(\vec{e_i}) ~|~ \cond{e}{e}{e} ~|~ \while{e}{e} \\
+& | & e;e ~|~ \lookup{e}{e} ~|~ \store{e}{e}{e} ~|~ \delete{e}{e} ~|~ \newref{\ell}{e} ~|~ \deref{e} ~|~ \setref{e}{e} ~|~ \send{e}{e}{\rho} \\
+& | & \exercise{\rho}.
 \end{array}
 \]
-\begin{tabular}{l l l l}
-{[\textit{PE-Val}]}&\multicolumn{3}{l}{$\aenvs \modelrho c : \vat$ iff $\{d_c\} \subseteq \vat$} \\
-{[\textit{PE-Var}]}&\multicolumn{3}{l}{$\aenvs \modelrho x : \vat$ iff $\Env(x) \subseteq \vat$} \\ 
-{[\textit{PE-Lambda}]}&\multicolumn{3}{l}{$\aenvs \modelrho \lam{x}{e} : \vat$ iff $\{\lam{x}{e}\} \subseteq \vat$} \\
-{[\textit{PE-Obj}]}&\multicolumn{3}{l}{$\caest {\rec{\vec{str_i : e_i}}}$ iff} \\
-&&\multicolumn{2}{l}{$\forall i: \caesti {e_i} {i} \wedge$}\\
-&&&$\rec{\vec{str_i :\vat_i}} \subseteq \vat \wedge$ \\
-&&&$\rho_i \sqsubseteq \rho$ \\ 
-{[\textit{PE-Let}]}&\multicolumn{3}{l}{$\caest {\letexprs{x_i}{e_i}{e'}}$ iff}\\
-&&\multicolumn{2}{l}{$\aenvs \modelrho e' : \vat \gg \rho' \wedge$} \\
-&&\multicolumn{2}{l}{$\rho' \sqsubseteq \rho \wedge$} \\
-&&\multicolumn{2}{l}{$ \forall i:$}\\
-&&& $\caesti {e_i} {i} \wedge$ \\
-&&& $\vat_i \subseteq \Env(x_i) \wedge$ \\
-&&& $\rho_i \sqsubseteq \rho$ \\
-{[\textit{PE-App}]}&\multicolumn{3}{l}{$\caest {\appl {e_1} {e_2}}$ iff} \\
-&&\multicolumn{2}{l}{$\caesti {e_1} {1} \wedge$} \\
-&&\multicolumn{2}{l}{$\caesti {e_2} {2} \wedge$} \\
-&&\multicolumn{2}{l}{$\rho_1 \sqsubseteq \rho \wedge$} \\
-&&\multicolumn{2}{l}{$\rho_2 \sqsubseteq \rho \wedge$} \\
-&&\multicolumn{2}{l}{$\forall (\lam{x}{e_0}) \in \vat_1 :$}\\
-&&&$\vat_2 \subseteq \Env(x) \wedge$\\
-&&&$\caesti {e_0} {0} \wedge$\\ 
-&&&$\rho_0 \sqsubseteq \rho \wedge$\\
-&&&$\vat_0 \subseteq \vat $\\
-{[\textit{PE-Op}]}&\multicolumn{3}{l}{$\caest {\op (\vec{e_i})} $ iff}\\
-&&\multicolumn{2}{l}{$\forall i :$}\\
-&&&$\caesti {e_i} {i} \wedge $\\
-&&&$\rho_i \sqsubseteq \rho \wedge$\\
-&&\multicolumn{2}{l}{$\widehat{op} (\vec{\vat_i}) \subseteq \vat $}\\
-{[\textit{PE-Cond}]}&\multicolumn{3}{l}{$\caest {\cond {e_0} {e_1} {e_2}} $ iff}\\
-&&\multicolumn{2}{l}{$\caesti {e_0} {0} \wedge$}\\
-&&\multicolumn{2}{l}{$\rho_0 \sqsubseteq \rho \wedge$} \\
-&&\multicolumn{2}{l}{$\widehat{\true} \in \vat_0 \Rightarrow$}\\
-&&&$\caesti {e_1} {1} \wedge \vat_1 \subseteq \vat \wedge \rho_1 \sqsubseteq \rho \wedge$ \\
-&&\multicolumn{2}{l}{$\widehat{\false} \in \vat_0 \Rightarrow$}\\
-&&&$\caesti {e_2} {2} \wedge \vat_2 \subseteq \vat \wedge \rho_2 \sqsubseteq \rho$ \\
-{[\textit{PE-While}]}&\multicolumn{3}{l}{$\caest {\while {e_1} {e_2}} $ iff}\\
-&&\multicolumn{2}{l}{$\caesti {e_1} {1} \wedge $}\\
-&&\multicolumn{2}{l}{$\rho_1 \sqsubseteq \rho \wedge$} \\
-&&\multicolumn{2}{l}{$\widehat{\true} \in \vat_1 \Rightarrow$}\\
-&&&$\caesti {e_2} {2} \wedge \vat_2 \subseteq \vat \wedge \rho_2 \sqsubseteq \rho \wedge$\\
-&&\multicolumn{2}{l}{$\widehat{\false} \in \vat_1 \Rightarrow$}\\
-&&&$\widehat{\undef} \subseteq \vat$\\
-{[\textit{PE-GetField}]}&\multicolumn{3}{l}{$\caest {\lookup {e_1} {e_2}} $ iff}\\
-&&\multicolumn{2}{l}{$ \caesti {e_1} {1} \wedge $}\\
-&&\multicolumn{2}{l}{$\rho_1 \sqsubseteq \rho \wedge$} \\
-&&\multicolumn{2}{l}{$ \caesti {e_2} {2} \wedge $} \\
-&&\multicolumn{2}{l}{$\rho_2 \sqsubseteq \rho \wedge$} \\
-&&\multicolumn{2}{l}{$\widehat{get} (\vat_1, \vat_2) \subseteq \vat$} \\
-\end{tabular}\newpage
-\begin{tabular} {l l l l}
-{[\textit{PE-SetField}]}&\multicolumn{3}{l}{$\caest {\store {e_0} {e_1} {e2}} $ iff}\\
-&&\multicolumn{2}{l}{$ \caesti {e_0} {0} \wedge $}\\
-&&\multicolumn{2}{l}{$\rho_0 \sqsubseteq \rho \wedge$} \\
-&&\multicolumn{2}{l}{$ \caesti {e_1} {1} \wedge $} \\
-&&\multicolumn{2}{l}{$\rho_1 \sqsubseteq \rho \wedge$} \\
-&&\multicolumn{2}{l}{$ \caesti {e_2} {2} \wedge $} \\
-&&\multicolumn{2}{l}{$\rho_2 \sqsubseteq \rho \wedge$} \\
-&&\multicolumn{2}{l}{$\widehat{set} (\vat_0, \vat_1, \vat_2) \subseteq \vat$} \\
-{[\textit{PE-DelField}]}&\multicolumn{3}{l}{$\caest {\delete {e_1} {e_2}} $ iff}\\
-&&\multicolumn{2}{l}{$ \caesti {e_1} {1} \wedge$}\\
-&&\multicolumn{2}{l}{$\rho_1 \sqsubseteq \rho \wedge$} \\
-&&\multicolumn{2}{l}{$ \caesti {e_2} {2} \wedge $} \\
-&&\multicolumn{2}{l}{$\rho_2 \sqsubseteq \rho \wedge$} \\
-&&\multicolumn{2}{l}{$\widehat{del} (\vat_1, \vat_2) \subseteq \vat$}\\
-{[\textit{PE-Ref}]}&\multicolumn{3}{l}{$ \aenvs \modelrho \newref {r,\rho_r} {e} :\{r\} \gg \rho $ iff}\\
-&&\multicolumn{2}{l}{$ \caest {e} \wedge $}\\
-&&\multicolumn{2}{l}{$\rho_r \sqsubseteq \rho_s \Rightarrow \vat \subseteq \muat(r, \rho_r) $} \\
-{[\textit{PE-DeRef}]}&\multicolumn{3}{l}{$\caest {\deref {e}} $ iff}\\
-&&\multicolumn{2}{l}{$\caesti {e} {1} \wedge $}\\
-&&\multicolumn{2}{l}{$\rho_1 \sqsubseteq \rho \wedge$ }\\
-&&\multicolumn{2}{l}{$\forall r \in \vat_1 : \forall \rho_r \sqsubseteq \rho_s : \muat(r, \rho_r) \subseteq \vat$ }\\
-{[\textit{PE-SetRef}]}&\multicolumn{3}{l}{$\caest {\setref {e_1} {e_2}} $ iff}\\
-&&\multicolumn{2}{l}{$ \caesti {e} {1} \wedge $}\\
-&&\multicolumn{2}{l}{$\rho_1 \sqsubseteq \rho \wedge$} \\
-&&\multicolumn{2}{l}{$ \caesti {e_2} {2} \wedge $}\\
-&&\multicolumn{2}{l}{$\rho_2 \sqsubseteq \rho \wedge$}\\
-&&\multicolumn{2}{l}{$\forall r \in \vat_1 : \forall \rho_r \sqsubseteq \rho_s :$}\\
-&&&$\vat_2 \subseteq \muat(r, \rho_r) \wedge$ \\
-&&&$\vat_2 \subseteq \vat $\\
-{[\textit{PE-Send}]}& \dots \\
-{[\textit{PE-Err}]}& \dots \\
-{[\textit{PE-Exercise}]}& \dots \\
-\end{tabular}
+The operations $\op(\vec{e_i})$ include arithmetic operations, boolean
+operations and string operations including string equality, denoted by
+$==$. The creation of new references comes with an annotation:
+$\newref{\ell}{e}$ creates a fresh reference $r_\ell$ labelled by $\ell$.
+We observe that $\ell$ plays no role in the semantics: annotating the reference
+with the program point where it has been created will be useful for our
+static analysis (actually to deal with reference creation within
+loops).
 
-\subsection{Compositional Verbose}
-\begin{tabular}{l l l l}
-{[\textit{CV-Val}]}&\multicolumn{3}{l}{$ \ccestl {c} $ iff $\{d_c\} \subseteq \Cat(\ell)$} \\ 
-{[\textit{CV-Var}]}&\multicolumn{3}{l}{$ \ccestl {x} $ iff $\Env(x) \subseteq \Cat(\ell)$} \\ 
-{[\textit{CV-Lambda}]}&\multicolumn{3}{l}{$ \ccestl {\lam{x}{\lbt 0}} $ iff}\\
-&&\multicolumn{2}{l}{$\{\lam{x}{\lbt 0}\} \subseteq \Cat(\ell) \wedge $}\\
-&&\multicolumn{2}{l}{$ \ccest {\lbt 0}$}\\
-{[\textit{CV-Obj}]}&\multicolumn{3}{l}{$ \ccestl {\rec{\vec{str_i : \lbt i}}}$ iff}\\
-&&\multicolumn{2}{l}{$\forall i:$}\\
-&&&$\ccest {\lbt i} \wedge$\\
-&&&$\Pat(\ell_i) \sqsubseteq \Pat(\ell) \wedge$\\ 
-&&\multicolumn{2}{l}{$\rec{\vec{str_i : \Cat(\ell_i)}} \subseteq \Cat_\ell $} \\
-{[\textit{CV-Let}]}&\multicolumn{3}{l}{$ \ccestl {\letexprs{x_i}{\lbt i}{{e'}^{\ell'}}}$ iff}\\
-&&\multicolumn{2}{l}{$ \ccest {{e'}^{\ell'}} \wedge$} \\
-&&\multicolumn{2}{l}{$ \Pat(\ell') \sqsubseteq \Pat(\ell) \wedge$}\\
-&&\multicolumn{2}{l}{$ \Cat(\ell') \subseteq \Cat(\ell) \wedge$}\\
-&&\multicolumn{2}{l}{$ \forall i:$}\\
-&&&$\ccest {{e_i}^{\ell_i}} \wedge$ \\
-&&& $ \Cat(\ell_i) \subseteq \Env(x_i) \wedge$ \\
-&&& $ \Pat(\ell_i) \sqsubseteq \Pat(\ell) $ \\
-{[\textit{CV-App}]}&\multicolumn{3}{l}{$ \ccestl {\appl {\lbt 1} {\lbt 2}}$ iff}\\
-&&\multicolumn{2}{l}{$\ccest {\lbt 1} \wedge \ccest {\lbt 2} \wedge$} \\
-&&\multicolumn{2}{l}{$\Pat(\ell_1) \sqsubseteq \Pat(\ell) \wedge \Pat(\ell_2) \sqsubseteq \Pat(\ell)$} \\
-&&\multicolumn{2}{l}{$\forall (\lam{x}{\lbt 0}) \in \Cat(\ell_1) :$}\\
-&&&$\Cat(\ell_2) \subseteq \Env(x) \wedge \Cat(\ell_0) \subseteq \Cat(\ell) \wedge$\\
-&&&$\Pat(\ell_0) \sqsubseteq \Pat(\ell) $\\
-{[\textit{CV-Op}]}&\multicolumn{3}{l}{$ \ccestl {\op (\vec{\lbt i})} $ iff}\\
-&&\multicolumn{2}{l}{$\forall i :$}\\
-&&&$\ccest {\lbt i} \wedge $\\
-&&&$\Pat(\ell_i) \sqsubseteq \Pat(\ell) \wedge$\\
-&&\multicolumn{2}{l}{$\widehat{op} (\Cat(\ell_i)) \subseteq \Cat(\ell) $}\\
-{[\textit{CV-Cond}]}&\multicolumn{3}{l}{$\ccestl{\cond {\lbt 0} {\lbt 1} {\lbt 2}} $ iff}\\
-&&\multicolumn{2}{l}{$ \ccest {\lbt 0} \wedge $}\\
-&&\multicolumn{2}{l}{$\Pat(\ell_0) \sqsubseteq \Pat(\ell) \wedge$} \\
-&&\multicolumn{2}{l}{$\widehat{\true} \in \Cat(\ell_0) \Rightarrow$}\\
-&&&$\ccest {\lbt 1} \wedge \Cat(\ell_1) \subseteq \Cat(\ell)\wedge$\\
-&&&$\Pat(\ell_1) \sqsubseteq \Pat(\ell) \wedge$ \\
-&&\multicolumn{2}{l}{$\widehat{\false} \in \Cat(\ell_0) \Rightarrow$}\\
-&&&$\ccest {\lbt 2} \wedge \Cat(\ell_2) \subseteq \Cat(\ell) \wedge$\\
-&&&$\Pat(\ell_2) \sqsubseteq \Pat(\ell)$ \\
-{[\textit{CV-While}]}&\multicolumn{3}{l}{$\ccestl {\while {\lbt 1} {\lbt 2}} $ iff}\\
-&&\multicolumn{2}{l}{$ \ccest {\lbt 1} \wedge $}\\
-&&\multicolumn{2}{l}{$\Pat(\ell_1) \sqsubseteq \Pat(\ell) \wedge$} \\
-&&\multicolumn{2}{l}{$\widehat{\true} \in \Cat(\ell_1) \Rightarrow$}\\
-&&&$\ccest {\lbt 2} \wedge \Cat(\ell_2) \subseteq \Cat(\ell) \wedge$\\
-&&&$ \Pat(\ell_2) \sqsubseteq \Pat(\ell) \wedge$\\
-&&\multicolumn{2}{l}{$\widehat{\false} \in \Cat(\ell_1) \Rightarrow \widehat{\undef} \subseteq \Cat(\ell)$}\\
-\end{tabular}
+We discuss the non-standard expressions.  The expression
+$\send{a}{v}{\rho}$ sends the value $v$ on channel $a$: the value can
+be received by any handler listening on $a$, provided that it is
+granted permission $\rho$ (this allows the sender to protect the
+message). The expression $\exercise{\rho}$ exercises the permission
+$\rho$. Indeed, in order to keep simple the calculus and to more
+clearly state our security property, we abstract any
+security sensitive expression (such as the call of a function library)
+with the generic exercise of the correspondent privilege. 
 
-\begin{tabular} {l l l l}
-{[\textit{CV-GetField}]}&\multicolumn{3}{l}{$\ccestl {\lookup {\lbt 1} {\lbt 2}} $ iff}\\
-&&\multicolumn{2}{l}{$ \ccest {\lbt1} \wedge $}\\
-&&\multicolumn{2}{l}{$\Pat(\ell_1) \sqsubseteq \Pat(\ell) \wedge$} \\
-&&\multicolumn{2}{l}{$ \ccest {\lbt 2} \wedge $} \\
-&&\multicolumn{2}{l}{$\Pat(\ell_2) \sqsubseteq \Pat(\ell) \wedge$} \\
-&&\multicolumn{2}{l}{$\widehat{get} (\Cat(\ell_1), \Cat(\ell_2)) \subseteq \Cat(\ell)$} \\
-{[\textit{CV-SetField}]}&\multicolumn{3}{l}{$\ccestl {\store {\lbt 0} {\lbt 1} {\lbt 2}} $ iff}\\
-&&\multicolumn{2}{l}{$ \ccest {\lbt 0} \wedge $}\\
-&&\multicolumn{2}{l}{$\Pat(\ell_0) \sqsubseteq \Pat(\ell) \wedge$} \\
-&&\multicolumn{2}{l}{$ \ccest {\lbt 1} \wedge $} \\
-&&\multicolumn{2}{l}{$\Pat(\ell_1) \sqsubseteq \Pat(\ell) \wedge$} \\
-&&\multicolumn{2}{l}{$ \ccest {\lbt 2} \wedge $} \\
-&&\multicolumn{2}{l}{$\Pat(\ell_2) \sqsubseteq \Pat(\ell) \wedge$} \\
-&&\multicolumn{2}{l}{$\widehat{set} (\Cat(\ell_0), \Cat(\ell_1), \Cat(\ell_2)) \subseteq \Cat(\ell)$} \\
-{[\textit{CV-DelField}]}&\multicolumn{3}{l}{$\ccestl {\delete {\lbt 1} {\lbt 2}} $ iff}\\ 
-&&\multicolumn{2}{l}{$ \ccest {\lbt 1} \wedge $}\\
-&&\multicolumn{2}{l}{$\Pat(\ell_1) \sqsubseteq \Pat(\ell) \wedge$} \\
-&&\multicolumn{2}{l}{$ \ccest {\lbt 2} \wedge $} \\
-&&\multicolumn{2}{l}{$\Pat(\ell_2) \sqsubseteq \Pat(\ell) \wedge$} \\
-&&\multicolumn{2}{l}{$\widehat{del} (\Cat(\ell_1), \Cat(\ell_2)) \subseteq \Cat(\ell)$}\\
-{[\textit{CV-Ref}]}&\multicolumn{3}{l}{$ \ccestl {\newref {r,\rho_r} {\lbt 1}} $ iff}\\
-&&\multicolumn{2}{l}{$\ccest {\lbt 1} \wedge $}\\
-&&\multicolumn{2}{l}{$\{r\} \subseteq \Cat(\ell) \wedge$}\\
-&&\multicolumn{2}{l}{$\Pat(\ell_1) \sqsubseteq \Pat(\ell) \wedge$}\\
-&&\multicolumn{2}{l}{$\rho_r \sqsubseteq \rho_s \Rightarrow \Cat(\ell_1) \subseteq \muat(r, \rho_r) $}\\
-{[\textit{CV-DeRef}]}&\multicolumn{3}{l}{$\ccestl {\deref {\lbt 1}} $ iff}\\
-&&\multicolumn{2}{l}{$ \ccest {\lbt 1}\wedge $}\\
-&&\multicolumn{2}{l}{$\Pat(\ell_1) \sqsubseteq \Pat(\ell) \wedge$}\\
-&&\multicolumn{2}{l}{$\forall r \in \Cat(\ell_1) : \forall \rho_r \sqsubseteq \rho_s :$}\\
-&&&$\muat(r, \rho_r) \subseteq \Cat(\ell)$ \\
-{[\textit{CV-SetRef}]}&\multicolumn{3}{l}{$\ccestl {\setref {\lbt 1} {\lbt 2}} $ iff}\\
-&&\multicolumn{2}{l}{$ \ccest {\lbt 1} \wedge $}\\
-&&\multicolumn{2}{l}{$ \Pat(\ell_1) \sqsubseteq \Pat(\ell) \wedge $}\\
-&&\multicolumn{2}{l}{$ \ccest {\lbt 2} \wedge $}\\
-&&\multicolumn{2}{l}{$ \Pat(\ell_2) \sqsubseteq \Pat(\ell) \wedge $}\\
-&&\multicolumn{2}{l}{$ \forall r \in \Cat(\ell_1) : \forall \rho_r \sqsubseteq \rho_s :$}\\
-&&&$\Cat(\ell_2) \subseteq \muat(r, \rho_r) \wedge$ \\
-&&\multicolumn{2}{l}{$\Cat(\ell_2) \subseteq \Cat(\ell) $} \\
-{[\textit{PE-Send}]}& \dots \\
-{[\textit{PE-Err}]}& \dots \\
-{[\textit{PE-Exercise}]}& \dots \\
-\end{tabular}
+\paragraph*{Memories.}
+We let $\mu$ range over \emph{memories}, defined by the following productions:
+\[
+\mu ::= \emptyset ~|~ \mu, \map{r_{\ell}}{\rho}{v}.
+\]
+A memory is a partial map from (labelled) references to values, implementing an access control policy. Specifically, if $\map{r_{\ell}}{\rho}{v} \in \mu$, then permission $\rho$ is required to have read/write access on the reference $r$ in $\mu$. Given a memory $\mu$, we let $\dom(\mu) = \{r ~|~ \map{r_{\ell}}{\rho}{v} \in \mu\}$.
 
-\section{Theorem} % teorema (senza dimostrazione)
+\paragraph*{Handlers.} 
+We let $h$ range over multisets of \emph{handlers}, defined by the following productions:
+\[
+h ::= \emptyset ~|~ h,\handler{a}{x}{\rho}{e}{\rho'}.
+\]
+The handler $\handler{a}{x}{\rho}{e}{\rho'}$ is an expression $e$, which is granted permission $\rho'$. The handler is guarded by a channel $a$, which requires permission $\rho$ for write access: this allows the receiver to be protected against untrusted senders. When a message is sent over $a$, the expression $e$ will be disclosed and a new \emph{instance} of the handler is created.
+
+\paragraph*{Instances.} 
+We let $i$ range over pools of running \emph{instances}, i.e., the active part of a system which is spawned when a message is received by an handler. An instance is a running expression, which is granted a set of permissions. Instances are multisets defined as follows:
+\[
+i,j ::= \emptyset ~|~ i,\inst{a}{e}{\rho}
+\]
+Instances are annotated with the channel name corresponding to the handler which spawned them: this is convenient for our static analysis, but it is not important for the semantics.
+
+\paragraph*{Systems.} 
+A \emph{system} is defined as a triple $s = \sys{\mu}{h}{i}$.
+
+
+\paragraph{Example:}
+Handlers can be used to model the single entry point of a Chrome component, which is represented by the the function \texttt{onMessage}. To understand the programming model, let's consider a simple protocol:
+\[
+\begin{array}{l}
+A \rightarrow B: \rec{tag: "init", val: x} \\
+B \rightarrow A: y \\
+A \rightarrow B: \rec{tag: "okay", other: z}
+\end{array}
+\]
+In Chrome, and in $\lambda_{JS}$, the component $B$ is programmed more or less as in table \ref{tab:OnMessageCalc}. \todo{OK?}
+
+\begin{table}[tlb]
+\begin{small}
+\begin{center}
+\begin{tabular}{p{0.95\linewidth}}
+Javascript\\
+\hline
+\lstset{language=java}
+\begin{lstlisting}
+void onMessage (Message m) {
+    if (m.tag == "init")
+        process_request (m.val) >> rho;
+    else if (m.tag == "okay")
+        process_other (m.other) >> rho';
+    else
+        do nothing;
+}
+\end{lstlisting}\\
+\hline
+\hline
+$\lambda_{JS}$\\
+\hline
+\lstset{language=ml}
+\begin{lstlisting}
+a(m <| SEND: BACK).
+	if (== (m["tag"], "init"))
+		process_request (m["val"])
+		exercise(rho)
+	else if (== (m["tag"], "okay"))
+		process_other (m["other"])
+		exercise(rho')
+	else
+		do_nothing
+\end{lstlisting}
+\end{tabular}
+\end{center}
+\end{small}
+\caption{onMessage handler in Javascript and in $\lambda_{JS}$}
+\label{tab:OnMessageCalc}
+\end{table}
+
+
+\subsection{Semantics}
+The small-step operational semantics is defined in terms of a labelled
+reduction relation between systems, i.e., $s \xra{\alpha} s'$, and an
+auxiliary reduction relation between expressions that is directly inherited
+from $\lambda_{JS}$, i.e.,  $\mu;e \hra_\rho \mu';e'$. We associate
+labels to reduction steps just to easily state our security property and 
+to provide additional informations in the proofs, however labels have no 
+impact on the semantics.
+
+Tables~\ref{tab:reduction} and \ref{tab:lambdajs} collect the
+reduction rules for systems and expressions, where the syntax of
+labels $\alpha$ is defined as follows: 
+\[
+\alpha ::= \cdot ~|~ \labex{a}{\rho_a}{\rho} ~|~ \labcall{a}{\rho_a}{b}{\rho_b}.
+\] 
+The step $s\xra{\labex{a}{\rho_a}{\rho}}s'$ identifies the exercise of the privilege
+$\rho$ by a system component $a$ with privileges $\rho_a$, while the step
+$s\xra{\labcall{a}{\rho_a}{b}{\rho_b}}s'$ records the fact that an instance $a$
+with privilege $\rho_a$ sends a message to an handler $b$ allowing the spawning of 
+a new $b$-instance running with privilege $\rho_b$. Any other reduction step is
+characterized by $s \xra{\cdot} s'$.
+We write $\xRa{\vec{\alpha}}$ for the reflexive-transitive closure of $\xra{\alpha}$.
+ 
+\begin{table}[htb]
+\small
+\begin{mathpar}
+\inferrule[(R-Sync)]
+{h = h',\handler{b}{x}{\rho_s}{e}{\rho_b} \\ 
+\rho_s \sqsubseteq \rho_a \\ \rho_r \sqsubseteq \rho_b \\ v \text{ is serializable}}
+{\sys{\mu}{h}{\inst{a}{\ctx{E}{\send{b}{v}{\rho_r}}}{\rho_a}} 
+\xra{\labcall{a}{\rho_a}{b}{\rho_b}}
+\sys{\mu}{h}{\inst{a}{\ctx{E}{\unit}}{\rho_a} , 
+             \inst{b}{e\subst{v}{x}}{\rho_b}}}
+
+\inferrule[(R-Exercise)]
+{\rho \sqsubseteq \rho_a}
+{\sys{\mu}{h}{\inst{a}{\ctx{E}{\exercise{\rho}}}{\rho_a}} \xra{\labex{a}{\rho_a}{\rho}} \sys{\mu}{h}{\inst{a}{\ctx{E}{\unit}}{\rho_a}}}
+
+\inferrule[(R-Set)]
+{\sys{\mu}{h}{i} \xra{\alpha} \sys{\mu'}{h'}{i'}}
+{\sys{\mu}{h}{i,i''} \xra{\alpha} \sys{\mu'}{h'}{i',i''}}
+
+\inferrule[(R-Basic)]
+{\mu;e \hra_\rho \mu';e'}
+{\sys{\mu}{h}{\inst{a}{e}{\rho}} \xra{\cdot} \sys{\mu'}{h}{\inst{a}{e'}{\rho}}}
+\end{mathpar}
+\caption{Small-step operational semantics $s \xra{\alpha} s'$}
+\label{tab:reduction}
+\end{table}
+
+Rule \irule{R-Sync} implements a security cross-check between sender and receiver: by specifying a permission $\rho_r$ on the send expression, the sender can require the receiver to have at least that permission, while specifying a permission $\rho_s$ in the handler, the receiver can require the sender to have at least that permission. If the security check succeeds, a new instance is created and the sent value is substituted to the bound variable in the handler.
+
+Evaluation contexts are defined by the following productions:
+$$
+\begin{array}{lcl}
+E & ::= & \bullet ~|~ \letexpr{x}{E}{e} ~|~ \appl{E}{e}~|~\appl{v}{E} ~|~ \op(\vec{v_i},E,\vec{e_j}) ~|~ \cond{E}{e}{e} ~|~ \lookup{E}{e} \\
+& | & \lookup{v}{E} ~|~ \store{E}{e}{e} ~|~ \store{v}{E}{e} ~|~ \store{v}{v}{E} ~|~ \delete{E}{e} ~|~ \delete{v}{E} ~|~ \newref{\ell}{E} \\
+& | &  \deref{E} ~|~ \setref{E}{e} ~|~ \setref{v}{E} ~|~ E;e ~|~ \send{E}{e}{\rho}~|~\send{v}{E}{\rho}.
+\end{array}
+$$
+
+The full reduction semantics $\lambda_{JS}$ is given in
+Table~\ref{tab:lambdajs}. The semantics comprises two layers: the
+basic reduction $e \hra e'$ does not include references and thus
+permissions play no role there; the internal reduction $\mu;e \hra_\rho
+\mu';e'$ builds on the simpler relation. Labels on references do not
+play any role at runtime: to formally prove it, we can define an
+unlabelled semantics (i.e., a semantics over unlabelled references) and
+show that, for any expression and any reduction step, we can preserve
+a bijection between labelled references and unlabelled ones, which
+respects the values stored therein. Intuitively, this is a consequence
+of \irule{JS-Ref}, which never introduces two references with the same
+name. Hence, there might be two references with the same label but
+different names, but no pair of references with the same name and two
+different labels.
+
+We discuss some important points: in rule \irule{JS-PrimOp} we assume a $\delta$ function, which defines the behaviour of primitives operations. In rule \irule{JS-Ref} we ensure that running instances can only create memory cells they can access; in rule \irule{JS-Deref} and \irule{JS-SetRef} we perform the expected access control checks.\todo{For simplicity we exclude the rules for prototype inheritance of LambdaJS: we can include them if needed, for sure we consider them in the implementation.}
+
+\begin{table}[p]
+\small
+\emph{Basic Reduction:}
+\begin{mathpar}
+\inferrule[(JS-PrimOp)]
+{}
+{\op(\vec{c_i}) \hra \delta(\op,\vec{c_i})}
+
+\inferrule[(JS-Let)]
+{}
+{\letexpr{x}{v}{e} \hra e\subst{v}{x}}
+
+\inferrule[(JS-App)]
+{}
+{\appl{(\lam{x}{e})}{v} \hra e\subst{v}{x}}
+
+\inferrule[(JS-GetField)]
+{}
+{\lookup{\rec{\vec{str_i:v_i},str:v,\vec{str_j':v_j'}}}{str} \hra v}
+
+\inferrule[(JS-GetNotFound)]
+{str \notin \{str_1,\ldots,str_n\}}
+{\lookup{\rec{\vec{str_i:v_i}}}{str} \hra \undef}
+
+\inferrule[(JS-UpdateField)]
+{}
+{\store{\rec{\vec{str_i:v_i},str:v,\vec{str_j':v_j'}}}{str}{v'} \hra \rec{\vec{str_i:v_i},str:v',\vec{str_j':v_j'}}}
+
+\inferrule[(JS-CreateField)]
+{str \notin \{str_1,\ldots,str_n\}}
+{\store{\rec{\vec{str_i:v_i}}}{str}{v} \hra \rec{str:v,\vec{str_i:v_i}}}
+
+\inferrule[(JS-DeleteField)]
+{}
+{\delete{\rec{\vec{str_i:v_i},str:v,\vec{str_j':v_j'}}}{str} \hra \rec{\vec{str_i:v_i},\vec{str_j':v_j'}}}
+
+\inferrule[(JS-DeleteNotFound)]
+{str \notin \{str_1,\ldots,str_n\}}
+{\delete{\rec{\vec{str_i:v_i}}}{str} \hra \rec{\vec{str_i:v_i}}}
+
+\inferrule[(JS-CondTrue)]
+{}
+{\cond{\true}{e_1}{e_2} \hra e_1}
+
+\inferrule[(JS-CondFalse)]
+{}
+{\cond{\false}{e_1}{e_2} \hra e_2}
+
+\inferrule[(JS-Discard)]
+{}
+{v;e \hra e}
+
+\inferrule[(JS-While)]
+{}
+{\while{e_1}{e_2} \hra \cond{e_1}{e_2; \while{e_1}{e_2}}{\undef}}
+\end{mathpar}
+
+\emph{Internal Reduction:}
+\begin{mathpar}
+\inferrule[(JS-Expr)]
+{e_1 \hra e_2}
+{\mu; e_1 \hra_\rho \mu; e_2}
+
+\inferrule[(JS-Ref)]
+{r \notin \dom(\mu) \\ \mu' = \mu, \map{r_{\ell}}{\rho}{v}}
+{\mu; \newref{\ell}{v} \hra_\rho \mu'; r_{\ell}}
+
+\inferrule[(JS-Deref)]
+{\mu = \mu',\map{r_{\ell}}{\rho}{v}}
+{\mu; \deref{r_{\ell}} \hra_\rho \mu; v}
+
+\inferrule[(JS-SetRef)]
+{\mu = \mu',\map{r_{\ell}}{\rho}{v'}}
+{\mu; \setref{r_{\ell}}{v} \hra_\rho \mu',\map{r_{\ell}}{\rho}{v}; v}
+
+\inferrule[(JS-Context)]
+{\mu; e_1 \hra_\rho \mu';e_2}
+{\mu; \ctx{E}{e_1} \hra_\rho \mu'; \ctx{E}{e_2}}
+\end{mathpar}
+\caption{Small-step operational semantics of $\lambda_{JS}$}
+\label{tab:lambdajs}
+\end{table}
+
+\begin{definition}[Exercise]
+\label{def:exercise}
+\mbox{ }
+\begin{itemize}
+\item A system $s$ \emph{exercises} $\rho$ if and only if there exists
+  $s'$ such that $s \xRa{\vec{\alpha}} s'$ and $\labex{a}{\rho_a}{\rho} \in
+  \{\vec{\alpha}\}$. 
+\item A system $s$ \emph{exercises at most} $\rho$ iff
+$\forall s',\vec{\alpha}$ such that $s\xRa{\vec{\alpha}}s'$, if
+$\labex{a}{\rho_a}{\rho'}\in \{\vec{\alpha}\}$ then $\rho'\sqsubseteq\rho$.
+\end{itemize}
+\end{definition}
+
+\noindent We say that a phrase of syntax $\phi$ is \emph{closed} iff $\fv(\phi) = \emptyset$.
+
+We now introduce our threat model. We assume that the set of variables $\vars$ is partitioned into two sets $\vars_t$ (trusted variables) and $\vars_u$ (untrusted variables). We stipulate that all the variables occurring in a system we analyse are drawn from $\vars_t$, while all the variables occurring in the opponent code are drawn from $\vars_u$.\todo{important for opponent typability}
+
+\begin{definition}[Opponent]
+\label{def:opponent}
+A \emph{$\rho$-opponent} is a closed pair $(h,i)$ such that:
+\begin{itemize}
+\item for any handler $\handler{a}{x}{\rho}{e}{\rho'} \in h$, we have $\rho' \sqsubseteq \rho$;
+\item for any instance $\inst{a}{e}{\rho'} \in i$, we have $\rho' \sqsubseteq \rho$;
+\item for any $x \in \fvbv(h) \cup \fvbv(i)$, we have $x \in \vars_u$.
+\end{itemize}
+\end{definition}
+
+Our security property is given over \emph{initial} systems, i.e., a system with no running instances, since we are interested in understanding the interplay between the exercised permissions and the message passing interface exposed by the handlers. In particular, we want to understand how many privileges the opponent can escalate by leveraging existing handlers.\todo{the security property is now given only over initial systems. the old version with arbitrary systems looked too weak.}
+
+\begin{definition}[Safety Despite Compromise]
+\label{def:safety}
+A system $s = \sys{\mu}{h}{\emptyset}$ is \emph{$\rho$-safe despite $\rho'$} (with $\rho \not\sqsubseteq \rho'$) if and only, for any $\rho'$-opponent $(h_o,i_o)$, the system $s' = \sys{\mu}{h,h_o}{i_o}$ exercises at most $\rho$.
+\end{definition}
+
+\section{Example}
+\label{sec:Example}
+Consider an extension made of two content scripts $CS1,CS2$ and a background page $B$. Assume that $CS1$ sends only messages with tag \texttt{Message1} and $CS2$ sends only messages with tag \texttt{Message2}.
+
+A simple formal encoding of the Google Chrome extension is the following:
+\begin{verbatim}
+cs1(x <| CS1: SEND).send(b,{tag: "Message1"} |> BACK)
+cs2(x <| CS2: SEND).send(b,{tag: "Message2"} |> BACK)
+b(x <| SEND: BACK).
+        if (x[tag] == "Message1") then exercise(rho) 
+        else exercise(rho')
+\end{verbatim}
+Assume that both $\rho$ and $\rho'$ are bounded above by BACK, while all the other permissions are unrelated. More sensible encodings are possible, but this is enough to present the analysis.
+
+\paragraph{Privilege escalation analysis.}
+The idea is that each handler has a ``type'' which describes the permissions which are needed to access it, and the permissions which will be exercised (also transitively) by the handler. For instance, the example above is acceptable according to the following assumptions:
+\begin{verbatim}
+cs1: CS1 ---> rho join rho'
+cs2: CS2 ---> rho join rho'
+b:   SEND ---> rho join rho'
+\end{verbatim}
+These assumptions environment tells us that a caller with permission SEND can escalate up to $\rho \join \rho'$. All these aspects are formalized in the \emph{abstract stack} we introduce below and our novel notion of \emph{permission leakage}, which quantifies the attack surface of the message passing interface.
+
+\paragraph{Refining the analysis.}
+While it is perfectly sensible that an opponent with permission SEND can escalate both $\rho$ and $\rho'$, the typing above may appear too conservative if we focus, for instance, on an opponent with permission CS1. Indeed, an opponent with CS1 can access the first content script, but not directly the background page: since CS1 sends only messages of the first type, it would be safe to state that the opponent can only escalate $\rho$ rather than $\rho \join \rho'$, which is not entailed by the typing above.
+
+Our analysis is precise, though, since it keeps track also of an abstract network, which approximates the incoming messages for all the handlers. In the example above we have:
+\begin{verbatim}
+cs1: TOP
+cs2: BOTTOM
+b:   {{tag:"Message1"}}
+\end{verbatim}
+where TOP signifies that $cs1$ can be accessed by the opponent (hence any value can be sent to it), while BOTTOM denotes that $cs2$ will never be called. Having BOTTOM for $cs2$ is important, since our static analysis will not analyse the body of $cs2$, hence there is no need to include \texttt{\{tag:"Message2"\}} among the messages processed by $b$. Since the ``else'' branch in $b$ is unreachable, we can admit the more precise typing:
+\begin{verbatim}
+cs1: CS1 ---> rho
+b:   SEND ---> rho
+\end{verbatim}
+which captures the correct information for a CS1-opponent (i.e., a CS1-opponent can only escalate $\rho$).
+
+\paragraph{Permission bundling analysis.}\todo{outdated example. still useful for next project.}
+Identifying dangerous permission bundling is challenging, since it depends on the structure of the exchanged messages. For instance, if both $CS1$ and $CS2$ employ the same tags, then the handler $B$ is not bundled at all and must be accepted. We associate to each handler a set of incoming messages and a set of outgoing messages, as follows:
+\begin{verbatim}
+cs1: (emptyset, b <- {tag: "Message1"})
+cs2: (emptyset, b <- {tag: "Message2"})
+b:   ({{tag: "Message1"}, {tag: "Message2"}}, emptyset)
+\end{verbatim}
+This is what is represented in the \emph{abstract networks} which we introduce below, even though the real structure of the abstract networks is slightly more complicated than this to make the static analysis more precise.
+
+Based on this information, we understand that we can refactor the code as follows:
+\begin{verbatim}
+cs1(x <| top).send(b1,{tag: "Message1"} |> B) with CS1
+cs2(x <| top).send(b2,{tag: "Message2"} |> B) with CS2
+b1(x <| CS1).if (x[tag] == "Message1") then >> rho else >> rho' with B
+b2(x <| CS2).if (x[tag] == "Message1") then >> rho else >> rho' with B
+\end{verbatim}
+For the opponent-aware analysis, this code is exactly as dangerous as the old one, since compromised components can just ignore tags (which indeed do not provide any security guarantee). Still, we can reuse our flow analysis to eliminate dead code:
+\begin{verbatim}
+cs1(x <| top).send(b1,{tag: "Message1"} |> B) with CS1
+cs2(x <| top).send(b,{tag: "Message2"} |> B) with CS2
+b1(x <| CS1).>> rho with B
+b2(x <| CS2).>> rho' with B
+\end{verbatim}
+Now the opponent-aware analysis shows a different surface for privilege escalation. Specifically, a caller with $CS1$ can escalate to $\rho$, while a caller with $CS2$ can escalate to $\rho'$, which is much better than before.
+
+\section{Safety properties} 
+\label{sec:SafetyProp}
+The aim of the analysis is to statically predict which privileges
+are granted to the opponent through the message-passing interface:
+for this purpose, it is helpful to approximate also the values an
+expression may evaluate to. The analysis works with abstract
+representations of the concrete values. The flow logic specification
+then consists of a set of clauses defining a judgement expressing
+acceptability of an analysis estimate for a given program fragment.
+
+In this section, the main judgement for the flow analysis of systems
+will be $\absC\Vdash s \despite{\rho}$, meaning that $\absC$ represents
+an acceptable analysis for $s$, even when $s$ interacts with a $\rho$-opponent.
+We will prove in the following that this implies that any $\rho$-opponent
+interacting with $s$ will at most escalate privileges according to an
+upper bound which we can immediately compute from $\absC$.
+
+\paragraph*{Abstract Values and Abstract Operations.} 
+Let $\absvalues$ stand for the set of the abstract values $\hat{v}$,
+defined as sets of abstract prevalues according to the following 
+productions\footnote{We occasionally omit brackets around singleton 
+abstract values for the sake of readability.}:
+\[
+\begin{array}{llcl}
+\mathit{Abstract\ prevalues} & \hat{u} & ::= & n ~|~ \hat{c} ~|~ \ell ~|~ \abslam{x}{\rho} ~|~ \absrec{\vec{str_i: v_i}}_{\absC,\rho}, \\
+\mathit{Abstract\ values} & \hat{v} & ::= & \{\hat{u}_1,\ldots,\hat{u}_n\}.
+\end{array}
+\]
+The abstract value $\hat{c}$ stands for the abstraction of the constant $c$.
+We dispense from listing all the abstract pre-values corresponding to 
+the constants of our calculus, but we assume that they include $\true$, 
+$\false$, $\unit$ and $\undef$.
+
+A function $\lam{x}{e}$ is abstracted into the simpler representation
+$\abslam{x}{\rho}$, keeping track of the escalated privileges $\rho$. Since 
+our operational semantics is substitution-based, having this more succinct
+representation is important to prove soundness. In the following we let 
+$\absfuns = \{\lambda x ~|~ x \in \vars\}$.
+
+The abstract value $\absrec{\vec{str_i: v_i}}_{\absC,\rho}$ is the abstract representation
+of the concrete record $\rec{\vec{str_i: v_i}}$ in the environment $\absC$, assuming
+permissions $\rho$. Similarly to constants, we do not fix any apriori abstract representation
+for records, i.e., both field-sensitive and field-insensitive analyses are fine.
+
+We associate to each concrete operation $\op$ an abstract counterpart $\absop$
+operating on abstract values. We also assume three abstract operations $\absget$,
+$\absset$ and $\absdel$, mirroring the standard get field, set field and delete
+field operations on records. All these abstract operations can be chosen arbitrarily,
+as long as they satisfy the conditions needed for the proofs. We assume that abstract
+values are ordered by a pre-order $\sqsubseteq$: we require this pre-order to satisfy
+some relatively mild conditions (see the proofs section).
+
+\paragraph*{Judgements.}  The judgements of the analysis are specified
+relative to an abstract environment $\absC$. The abstract environment
+is global meaning that it is going to represent \emph{all} the
+environments that may arise during the evaluation of the system.
+We let $\absC=\abstack ; \absnet ; \absenv ; \absmem$, that is, the 
+abstract environment is a four-tuple made of the following components:
+\[
+\begin{array}{llcl}
+\mathit{Abstract\ variable\ environment} & \absenv & : & \vars \cup \absfuns \rightarrow \absvalues \\
+\mathit{Abstract\ memory} & \absmem & : & \labs \times \perms \rightarrow \absvalues \\
+\mathit{Abstract\ stack} & \abstack & : & \names \times \perms \rightarrow \perms \times \perms \\
+\mathit{Abstract\ network} & \absnet & : & \names \times \perms \rightarrow \absvalues.
+\end{array}
+\]
+Abstract variable environments are standard: they associate abstract values to
+variables and to abstract functions. 
+Abstract memories are also somewhat standard: they associate abstract
+values to labels denoting references, but they also keep track of some permission
+information to make the analysis more precise. Specifically, 
+if $\absmem(\ell,\rho) = \hat{v}$, then all the references
+labelled with $\ell$ contain the abstract value $\hat{v}$, provided that they
+are protected with permission $\rho$.
+
+Abstract stacks are novel and are used to keep track of the
+permissions required to access a given handler and the permissions
+which are exercised (also transitively, i.e., via a call stack) by the
+handler itself. Specifically, if we have $\abstack(a,\rho_a) =
+(\rho_s,\rho_e)$, then the handler $a$ with permission $\rho_a$ can be
+accessed by any component with permission $\rho_s$ and it will be
+able to escalate privileges up to $\rho_e$, even by calling other handlers 
+in the system.
+
+Also abstract networks are novel and are used to keep track of the
+messages exchanged between handlers. For instance, if we have
+$\absnet(a,\rho_a) = \hat{v}$, then $\hat{v}$ is a sound abstraction
+of any message received by the handler $a$ with permission $\rho_a$. 
+
+To lighten the notation, we denote by $\absC_{\absenv}, \absC_{\absmem},
+\absC_{\abstack}, \absC_{\absnet}$ the four components of the abstract 
+environment $\absC$.
+ 
+\begin{table}[htb]
+\small
+\begin{mathpar}
+\inferrule[(PV-Name)]
+{n \in \hat{v}}
+{\absC \Vdash_{\rho} n \rightsquigarrow \hat{v}}
+
+\inferrule[(PV-Var)]
+{\absC_{\absenv}(x) \sqsubseteq \hat{v}}
+{\absC \Vdash_{\rho} x \rightsquigarrow \hat{v}}
+
+\inferrule[(PV-Cons)]
+{\{\hat{c}\} \sqsubseteq \hat{v}}
+{\absC \Vdash_{\rho} c \rightsquigarrow \hat{v}}
+
+\inferrule[(PV-Ref)]
+{\ell \in \hat{v}}
+{\absC \Vdash_{\rho} r_{\ell} \rightsquigarrow \hat{v}}
+
+\inferrule[(PV-Fun)]
+{\abslam{x}{\rho_e} \in \hat{v} \\ \absC \Vdash_{\rho} e: \hat{v}'  \escalate{\rho'} \\
+\hat{v}' \sqsubseteq \absC_{\absenv}(\lambda x) \\ \rho' \sqsubseteq \rho_e}
+{\absC \Vdash_{\rho} \lam{x}{e} \rightsquigarrow \hat{v}}
+
+\inferrule[(PV-Rec)]
+{\{\absrec{\vec{str_i: v_i}}_{\absC,\rho}\} \sqsubseteq \hat{v}}
+{\absC \Vdash_{\rho} \rec{\vec{str_i: v_i}} \rightsquigarrow \hat{v}}
+\end{mathpar}
+\caption{Flow analysis for values}
+\label{tab:privi-values}
+\end{table}
+
+%\paragraph*{Judgements.} 
+The judgements of the flow analysis have one of the following form:
+\begin{itemize}
+\item $\absC \Vdash_\rho v \rightsquigarrow \hat{v}$\\
+meaning that, assuming permission $\rho$, the concrete value $v$ is
+mapped to the abstract value $\hat{v}$ in the abstract environment $\absC$. 
+The rules to derive these judgements are collected in
+Table~\ref{tab:privi-values}.
+\item 
+ $\absC  \Vdash_\rho e: \hat{v} \escalate{\rho'}$\\
+meaning that in the context of an handler/instance with permission
+$\rho$, and under the abstract environment $\absC$, 
+the expression $e$ may evaluate to a value abstracted by $\hat{v}$ 
+and it will escalate (i.e., it will transitively exercise) at most
+$\rho'$. The rules for these judgements 
+are collected in Table~\ref{tab:privi-expr}. 
+\item $\absC \Vdash \mu \despite{\rho}$, $\absC \Vdash h \despite{\rho}$, 
+$\absC \Vdash i \despite{\rho}$, $\absC \Vdash s \despite{\rho}$\\
+meaning that the respective pieces of syntax are safe w.r.t. a $\rho$-opponent
+under the abstract environment $\absC$.
+\end{itemize}
+The formal definitions of the last judgements are in Table~\ref{tab:privi-system},
+where we put in place the required constraints to ensure opponent acceptability,
+while keeping the analysis sound. We also employ two additional definitions. 
+
+\begin{table}[p]
+\small
+\begin{mathpar}
+\inferrule*[width=10em,lab=(PE-Val)]
+{\absC \Vdash_{\rho_s} v \rightsquigarrow \hat{v}}
+{\absC \Vdash_{\rho_s} v: \hat{v} \escalate{\rho}}
+
+\inferrule*[width=20em,lab=(PE-Let)]
+{\absC \Vdash_{\rho_s} e_1: \hat{v}_1 \sqsubseteq \absC_{\absenv}(x) \escalate{\rho_1 \sqsubseteq \rho} \\
+\absC \Vdash_{\rho_s} e_2: \hat{v}_2 \sqsubseteq \hat{v} \escalate{\rho_2 \sqsubseteq \rho}}
+{\absC \Vdash_{\rho_s} \letexpr{x}{e_1}{e_2}: \hat{v} \escalate{\rho}}
+
+\inferrule*[width=10em,lab=(PE-App)]
+{\absC \Vdash_{\rho_s} e_1: \hat{v}_1 \escalate{\rho_1} \sqsubseteq \rho \\
+\absC \Vdash_{\rho_s} e_2: \hat{v}_2 \escalate{\rho_2} \sqsubseteq \rho \\
+\forall \abslam{x}{\rho_e} \in \hat{v}_1: \hat{v}_2 \sqsubseteq \absC_{\absenv}(x) \wedge \absC_{\absenv}(\lambda x) \sqsubseteq \hat{v} \wedge \rho_e \sqsubseteq \rho}
+{\absC \Vdash_{\rho_s} \appl{e_1}{e_2}: \hat{v} \escalate{\rho}}
+
+\inferrule*[width=20em,lab=(PE-Seq)]
+{\absC \Vdash_{\rho_s} e_1: \hat{v}_1 \escalate{\rho_1 \sqsubseteq \rho} \\
+\absC \Vdash_{\rho_s} e_2: \hat{v}_2 \sqsubseteq \hat{v} \escalate{\rho_2 \sqsubseteq \rho}}
+{\absC \Vdash_{\rho_s} e_1;e_2: \hat{v} \escalate{\rho}}
+
+\inferrule*[width=10em,lab=(PE-Op)]
+{\forall i: \absC \Vdash_{\rho_s} e_i: \hat{v}_i \escalate{\rho_i} \sqsubseteq \rho \\
+\absop(\vec{\hat{v}_i}) \sqsubseteq \hat{v}}
+{\absC \Vdash_{\rho_s} \op(\vec{e_i}): \hat{v} \escalate{\rho}}
+
+\inferrule*[width=10em,lab=(PE-Cond)]
+{\absC \Vdash_{\rho_s} e_0: \hat{v}_0 \escalate{\rho_0} \sqsubseteq \rho \\
+\abstrue \in \hat{v}_0 \Rightarrow \absC \Vdash_{\rho_s} e_1: \hat{v}_1 \sqsubseteq \hat{v} \escalate{\rho_1} \sqsubseteq \rho \\
+\absfalse \in \hat{v}_0 \Rightarrow \absC \Vdash_{\rho_s} e_2: \hat{v}_2 \sqsubseteq \hat{v} \escalate{\rho_2} \sqsubseteq \rho}
+{\absC \Vdash_{\rho_s} \cond{e_0}{e_1}{e_2}: \hat{v} \escalate{\rho}}
+
+\inferrule*[width=10em,lab=(PE-While)]
+{\absC \Vdash_{\rho_s} e_1: \hat{v}_1 \escalate{\rho_1} \sqsubseteq \rho \\
+\abstrue \in \hat{v}_1 \Rightarrow \absC \Vdash_{\rho_s} e_2: \hat{v}_2 \escalate{\rho_2} \sqsubseteq \rho \\
+\absfalse \in \hat{v}_1 \Rightarrow \absundef \in \hat{v}}
+{\absC \Vdash_{\rho_s} \while{e_1}{e_2}: \hat{v} \escalate{\rho}}
+
+\inferrule*[width=10em,lab=(PE-GetField)]
+{\absC \Vdash_{\rho_s} e_1: \hat{v}_1 \escalate{\rho_1 \sqsubseteq \rho} \\
+\absC \Vdash_{\rho_s} e_2: \hat{v}_2 \escalate{\rho_2 \sqsubseteq \rho} \\
+\absget(\hat{v}_1,\hat{v}_2) \sqsubseteq \hat{v}}
+{\absC \Vdash_{\rho_s} \lookup{e_1}{e_2}: \hat{v} \escalate{\rho}}
+
+\inferrule*[width=10em,lab=(PE-SetField)]
+{\absC \Vdash_{\rho_s} e_0: \hat{v}_0 \escalate{\rho_0 \sqsubseteq \rho} \\
+\absC  \Vdash_{\rho_s} e_1: \hat{v}_1 \escalate{\rho_1 \sqsubseteq \rho} \\
+\absC \Vdash_{\rho_s} e_2: \hat{v}_2 \escalate{\rho_2 \sqsubseteq \rho} \\
+\absset(\hat{v}_0,\hat{v}_1,\hat{v}_2) \sqsubseteq \hat{v}}
+{\absC\Vdash_{\rho_s} \store{e_0}{e_1}{e_2}: \hat{v} \escalate{\rho}}
+
+\inferrule*[width=10em,lab=(PE-DelField)]
+{\absC \Vdash_{\rho_s} e_1: \hat{v}_1 \escalate{\rho_1 \sqsubseteq \rho} \\
+\absC \Vdash_{\rho_s} e_2: \hat{v}_2 \escalate{\rho_2 \sqsubseteq \rho} \\
+\absdel(\hat{v}_1,\hat{v}_2) \sqsubseteq \hat{v}}
+{\absC \Vdash_{\rho_s} \delete{e_1}{e_2}: \hat{v} \escalate{\rho}}
+
+\inferrule*[width=16em,lab=(PE-Ref)]
+{\absC \Vdash_{\rho_s} e: \hat{v}' \escalate{\rho' \sqsubseteq \rho} \\
+\hat{v}' \sqsubseteq \absC_{\absmem}(\ell,\rho_s) \\ \ell \in \hat{v}}
+{\absC \Vdash_{\rho_s} \newref{\ell}{e}: \hat{v} \escalate{\rho}}
+
+\inferrule*[width=10em,lab=(PE-Deref)]
+{\absC \Vdash_{\rho_s} e: \hat{v}' \escalate{\rho' \sqsubseteq \rho} \\
+\forall \ell \in \hat{v}': \absC_{\absmem}(\ell,\rho_s) \sqsubseteq \hat{v}}
+{\absC \Vdash_{\rho_s} \deref{e}: \hat{v} \escalate{\rho}}
+
+\inferrule*[width=10em,lab=(PE-SetRef)]
+{\absC \Vdash_{\rho_s} e_1: \hat{v}_1 \escalate{\rho_1 \sqsubseteq \rho} \\
+\absC \Vdash_{\rho_s} e_2: \hat{v}_2 \sqsubseteq \hat{v} \escalate{\rho_2 \sqsubseteq \rho} \\
+\forall \ell \in \hat{v}_1: \hat{v}_2 \sqsubseteq \absC_{\absmem}(\ell,\rho_s)}
+{\absC \Vdash_{\rho_s} \setref{e_1}{e_2}: \hat{v} \escalate{\rho}} 
+
+\inferrule*[width=20em,lab=(PE-Send)]
+{\absC \Vdash_{\rho_s} e_1: \hat{v}_1 \escalate{\rho_1} \sqsubseteq \rho' \\
+\absC \Vdash_{\rho_s} e_2: \hat{v}_2 \escalate{\rho_2} \sqsubseteq \rho' \\
+\forall m \in \hat{v}_1: \forall \rho_m \sqsupseteq \rho: \absC_{\abstack}(m,\rho_m) = (\rho_r,\rho_e) \wedge \rho_r \sqsubseteq \rho_s \Rightarrow \rho_e \sqsubseteq \rho' \wedge \hat{v}_2 \sqsubseteq \absC_{\absnet}(m,\rho_m) \wedge \unit \in \hat{v}}
+{\absC \Vdash_{\rho_s} \send{e_1}{e_2}{\rho}: \hat{v} \escalate{\rho'}}
+
+\inferrule*[width=20em,lab=(PE-Exercise)]
+{\rho \sqsubseteq \rho_s \Rightarrow \rho \sqsubseteq \rho' \wedge \unit \in \hat{v}}
+{\absC \Vdash_{\rho_s} \exercise{\rho}: \hat{v} \escalate{\rho'}}
+\end{mathpar}
+\caption{Flow analysis for expressions}
+\label{tab:privi-expr}
+\end{table}
+
+
+\begin{definition}[Permission Leak]
+\label{def:perm-leak}
+Given an abstract environment $\absC$, we let its \emph{permission leak} against $\rho$ be:
+\[
+\permsleak{\rho}(\absC) = \bigsqcup_{\rho_e \in L} \rho_e,
+\mbox{ with } L = \{\rho_e ~|~ \exists a, \rho_a, \rho_s:
+\absC_{\abstack}(a,\rho_a) = (\rho_s,\rho_e) \wedge \rho_s \sqsubseteq
+\rho\}
+\]
+\end{definition}
+Remind that $\abstack(a,\rho_a) = (\rho_s,\rho_e)$ means that
+the handler $a$ can be called by any component with privileges $\rho_s$
+and it \emph{transitively} exercises up to $\rho_e$ privileges. 
+Then, intuitively the permission leak is a sound over-approximation of
+the permissions which can be escalated by the opponent in an initial system.
+
+Let $\absC$ be an abstract environment and pick a $\rho$-opponent. We define the set
+$\vars_{\rho}(\absC)$ as follows:
+\[
+\vars_{\rho}(\absC) = \vars_u \cup \{x ~|~ \exists \ell,\rho_r \sqsubseteq \rho,\rho_e: \abslam{x}{\rho_e} \in \absC_{\absmem}(\ell,\rho_r)\}.
+\]
+We let $\hat{v}_{\rho}(\absC) = \{\hat{u} ~|~ \fvbv(\hat{u}) \subseteq \vars_{\rho}(\absC)\}$.
+Intuitively, this is a sound abstraction of any value which can be generated by/flow to the opponent (the second component of the union above corresponds to functions generated by the trusted components, which may be actually called by the opponent at runtime).
+
+\begin{definition}[Conservative Abstract Environment]
+\label{def:conservativeness}
+An abstract environment $\absC$ is \emph{$\rho$-conservative} if and only if all the following conditions hold true:
+\begin{enumerate}
+\item $\forall n \in \names: \forall \rho' \sqsubseteq \rho: \absC_{\abstack}(n,\rho') = (\bot,\permsleak{\rho}(\absC))$;
+\item $\forall n \in \names: \forall \rho_n,\rho_s,\rho_e: \absC_{\abstack}(n,\rho_n) = (\rho_s,\rho_e) \wedge \rho_s \sqsubseteq \rho \Rightarrow \absC_{\absnet}(n,\rho_n) = \hat{v}_{\rho}(\absC)$;
+\item $\forall n \in \names: \forall \rho' \sqsubseteq \rho: \absC_{\absnet}(n,\rho') = \hat{v}_{\rho}(\absC)$;
+\item $\forall \ell \in \labs: \forall \rho' \sqsubseteq \rho: \absC_{\absmem}(\ell,\rho') = \hat{v}_{\rho}(\absC)$;
+\item $\forall x \in \vars_{\rho}(\absC): \absC_{\absenv}(x) = \absC_{\absenv}(\lambda x) = \hat{v}_{\rho}(\absC)$.
+\end{enumerate}
+\end{definition}
+In words, an abstract environment is conservative whenever 
+any code that can be run by the opponent is (soundly) assumed to
+escalate up to the maximal privilege $\permsleak{\rho}(\absC)$ (1) and
+any reference under the control of the opponent is assumed to
+contain any possible value (4). Moreover, the parameter of any function
+which could be called by the opponent should be assumed to contain
+any possible value and similarly these functions can return any value (5).
+Finally, handlers which can be contacted by the opponent and handlers 
+registered by the opponent may receive any value (2) and (3).
+
+\begin{table}[htb]
+\small
+\begin{mathpar}
+\inferrule*[width=10em,lab=(PM-Empty)]
+{}
+{\absC \Vdash \emptyset \despite{\rho}}
+
+\inferrule*[width=15em,lab=(PM-Ref)]
+{\absC \Vdash_{\rho_r} v \rightsquigarrow \hat{v} \\ \hat{v} \sqsubseteq \absC_{\absmem}(\ell,\rho_r)} 
+%\rho \sqsubseteq \rho' \Rightarrow \absC_{\absmem}(\ell,\rho) = \absvalues}
+{\absC \Vdash \map{r_{\ell}}{\rho_r}{v} \despite{\rho}}
+
+\inferrule*[width=10em,lab=(PM-Mem)]
+{\absC \Vdash \mu_1 \despite{\rho} \\
+\absC\Vdash \mu_2 \despite{\rho}}
+{\absC \Vdash \mu_1,\mu_2 \despite{\rho}}
+
+\inferrule*[width=10em,lab=(PH-Empty)]
+{}
+{\absC \Vdash \emptyset \despite{\rho}}
+
+\inferrule*[width=40em,lab=(PH-Single)]
+{\absC_{\abstack}(a,\rho_a) = (\rho_s',\rho_e') \\ 
+\rho_a \not\sqsubseteq \rho \Rightarrow \rho_s' = \rho_s \\
+\absC_{\absnet}(a,\rho_a) \neq \emptyset \Rightarrow \absC_{\absenv}(x) \sqsupseteq \absC_{\absnet}(a,\rho_a) \wedge \absC \Vdash_{\rho_a} e: \hat{v} \escalate{\rho_e} \wedge (\rho_a \not\sqsubseteq \rho \Rightarrow \rho_e' = \rho_e)}
+{\absC\Vdash \handler{a}{x}{\rho_s}{e}{\rho_a} \despite{\rho}}
+
+\inferrule*[width=10em,lab=(PH-Many)]
+{\absC \Vdash h \despite{\rho} \\
+\absC \Vdash h' \despite{\rho}}
+{\absC \Vdash h,h' \despite{\rho}}
+
+\inferrule*[width=10em,lab=(PI-Empty)]
+{}
+{\absC \Vdash \emptyset \despite{\rho}}
+
+\inferrule*[width=30em,lab=(PI-Single)]
+{\absC \Vdash_{\rho_a} e: \hat{v} \escalate{\rho_e} \\
+\rho_a \not\sqsubseteq \rho \Rightarrow \exists \rho_s: \absC_{\abstack}(a,\rho_a) = (\rho_s,\rho_e)}
+{\absC \Vdash \inst{a}{e}{\rho_a} \despite{\rho}}
+
+\inferrule*[width=10em,lab=(PI-Many)]
+{\absC \Vdash i \despite{\rho} \\
+\absC \Vdash i' \despite{\rho}}
+{\absC \Vdash i,i' \despite{\rho}}
+
+\inferrule*[width=50em,lab=(PS-Sys)]
+{\absC \Vdash \mu \despite{\rho} \\ 
+\absC \Vdash h \despite{\rho} \\
+\absC \Vdash i \despite{\rho} \\
+\absC \text{ is } \rho\text{-conservative}}
+{\absC \Vdash \mu; h; i \despite{\rho}}
+\end{mathpar}
+\caption{Flow analysis for systems}
+\label{tab:privi-system}
+\end{table}
+
+\paragraph{Running Example.}
+For our running example, we are able to analyse the code with respect
+to the abstract stack $\abstack$ such that: $\abstack(cs1, CS1) =
+(\top,\rho \join \rho')$ and $\abstack(cs2,CS2) = (\top,\rho \join
+\rho')$ and $\abstack(b,B) = (CS1 \meet CS2,\rho \join \rho')$.
+
+\section{Theorem}
 \label{sec:Theorem}
+\begin{theorem}[Safety Despite Compromise]
+\label{thm:safety-compromise}
+Let $s = \mu;h;\emptyset$. If $\absC \Vdash s \despite \rho$, then $s$ is $\rho'$-safe despite $\rho$ for $\rho' = \permsleak{\rho}(\absC)$. 
+\end{theorem}
 
-\section{Requirements for correctness} % condizioni necessarie per correttezza
+\section{Requirements for correctness}
 \label{sec:CorrectnesReqs}
+\todo{condizioni necessarie per correttezza}
+\todo{inizio parte 2 draft}
+\begin{assumption}[Abstracting Finite Domains]
+\label{asm:finite}
+$\forall c \in \{\true,\false,\unit,\undef\}: \hat{c} = c$.
+\end{assumption}
+
+\begin{assumption}[Soundness of Abstract Operations]
+\label{asm:sound-abs-op}
+$\forall \op: \forall \vec{c_i}: \forall c: \delta(\op,\vec{c_i}) = c \Rightarrow \{\hat{c}\} \sqsubseteq \absop(\vec{{\hat{c}_i}})$.
+\end{assumption}
+
+\begin{assumption}[Soundness of Abstract Record Operations]
+\label{asm:sound-abs-records}
+All the following properties hold true:
+\begin{enumerate}
+\item $\lookup{\rec{\vec{str_i:v_i}}}{str} \hra v \wedge \absget(\absrec{\vec{str_i:v_i}}_{\absC,\rho},\widehat{str}) = \hat{v}' \Rightarrow \exists \hat{v} \sqsubseteq \hat{v}': \absC \Vdash_{\rho} v \rightsquigarrow \hat{v}$;
+\item $\store{\rec{\vec{str_i:v_i}}}{str}{v'} \hra v \wedge \absC \Vdash_{\rho} v' \rightsquigarrow \hat{v}' \wedge \absset(\absrec{\vec{str_i:v_i}}_{\absC,\rho},\widehat{str},\hat{v}') = \hat{v}'' \Rightarrow \exists \hat{v} \sqsubseteq \hat{v}'': \absC \Vdash_{\rho} v \rightsquigarrow \hat{v}$;
+\item $\delete{\rec{\vec{str_i:v_i}}}{str} \hra v \wedge \absdel(\absrec{\vec{str_i:v_i}}_{\absC,\rho},\widehat{str}) = \hat{v}' \Rightarrow \exists \hat{v} \sqsubseteq \hat{v}': \absC \Vdash_{\rho} v \rightsquigarrow \hat{v}$.
+\end{enumerate}
+\end{assumption}
+
+\begin{assumption}[Monotonicity of Abstract Operations]
+\label{asm:mono-abs}
+The following property holds true:
+\[
+\forall \absop^* \in \{\absop,\absget,\absset,\absdel\}: \forall \vec{\hat{v}_i}: \forall \vec{\hat{v}_i'}: (\forall i: \hat{v}_i \sqsubseteq \hat{v}_i' \Rightarrow \absop^*(\vec{\hat{v}_i}) \sqsubseteq \absop^*(\vec{\hat{v}_i'})).
+\]
+\end{assumption}
+
+\begin{assumption}[Totality of Abstract Operations]
+\label{asm:totality-abs}
+$\forall \absop^* \in \{\absop,\absget,\absset,\absdel\}: \forall \vec{\hat{v}_i}: \exists \hat{v}: \absop^*(\vec{\hat{v}_i}) = \hat{v}$.
+\end{assumption}
+
+\begin{assumption}[Ordering Abstract Values]
+\label{asm:ordering}
+The relation $\sqsubseteq$ over $\hat{V} \times \hat{V}$ is a pre-order such that:
+\begin{enumerate}
+\item $\forall \hat{v},\hat{v}': \hat{v} \subseteq \hat{v}' \Rightarrow \hat{v} \sqsubseteq \hat{v}'$;
+\item $\forall \hat{v}: \hat{v} \sqsubseteq \emptyset \Rightarrow \hat{v} = \emptyset$;
+\item $\forall n: \forall \hat{v}: \{n\} \sqsubseteq \hat{v} \Rightarrow n \in \hat{v}$;
+\item $\forall \ell: \forall \hat{v}: \{\ell\} \sqsubseteq \hat{v} \Rightarrow \ell \in \hat{v}$;
+\item $\forall \abslam{x}{\rho}: \forall \hat{v}: \{\abslam{x}{\rho}\} \sqsubseteq \hat{v} \Rightarrow \exists \rho' \sqsupseteq \rho: \abslam{x}{\rho'} \in \hat{v}$;
+\item $\forall c \in \{\true,\false,\unit,\undef\}: \forall \hat{v}: \{\hat{c}\} \sqsubseteq \hat{v} \Rightarrow \hat{c} \in \hat{v}$.
+\end{enumerate}
+\end{assumption}
+
+\begin{assumption}[Abstracting Serializable Records]
+\label{asm:serializable-rec}
+If $\rec{\vec{str_i:v_i}}$ is serializable, then for any $\absC$, $\rho_a$ and $\rho_b$ we have $\absrec{\vec{str_i:v_i}}_{\absC,\rho_a} = \absrec{\vec{str_i:v_i}}_{\absC,\rho_b}$.
+\end{assumption}
+
+\begin{assumption}[Variables]
+\label{asm:variables}
+All the following properties hold true:
+\begin{enumerate}
+\item $\forall \hat{c}: \fvbv(\hat{c}) = \emptyset$;
+\item $\forall \absop: \forall \vec{\hat{v}_i}: \fvbv(\absop(\vec{\hat{v}_i})) = \emptyset$;
+\item $\forall \hat{v}_1,\hat{v}_2: \fvbv(\absget(\hat{v}_1,\hat{v}_2)) \subseteq \fvbv(\hat{v}_1)$;
+\item $\forall \hat{v}_0,\hat{v}_1,\hat{v}_2: \fvbv(\absset(\hat{v}_0,\hat{v}_1,\hat{v}_2)) \subseteq \fvbv(\hat{v}_0) \cup \fvbv(\hat{v}_2)$;
+\item $\forall \hat{v}_1,\hat{v}_2: \fvbv(\absdel(\hat{v}_1,\hat{v}_2)) \subseteq \fvbv(\hat{v}_1)$.
+\end{enumerate}
+\end{assumption}

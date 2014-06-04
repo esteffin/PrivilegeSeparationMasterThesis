@@ -7,6 +7,7 @@
 
 \renewcommand{\vec}[1]{\overrightarrow{#1}}
 \newcommand{\subst}[2]{[#1/#2]}
+\newcommand{\overwrite}[2]{[#1 \mapsto #2]}
 \newcommand{\xra}[1]{\xrightarrow{#1}}
 \newcommand{\xRa}[1]{\xRightarrow{#1}}
 \newcommand{\hra}{\hookrightarrow}
@@ -18,6 +19,8 @@
 \newcommand{\defined}[1]{#1\!\downarrow\ }
 
 \newcommand{\powerset}[1]{2^{#1}}
+\newcommand{\jm}{\mathcal{J}}
+\newcommand{\fvbv}{\mathit{vars}}
 
 \newenvironment{mcases}[0]{\begin{list}{{\em Case}}{\leftmargin 5pt}}{\end{list}}
 
@@ -53,7 +56,7 @@
 \newcommand{\acquire}[1]{\mathbf{acquire}(#1)}
 \newcommand{\release}[1]{\mathbf{release}(#1)}
 \newcommand{\register}[3]{\mathbf{register}(#1,#2,#3)}
-\newcommand{\exercise}[1]{\raisebox{1pt}{\scriptsize$\gg$}\,#1}
+\newcommand{\exercise}[1]{\mathbf{exercise}(#1)}
 \newcommand{\self}{\mathbf{self}}
 
 \newcommand{\match}[2]{\mathbf{match}\ #1\ \mathbf{with}\ \{#2\}}
@@ -66,8 +69,8 @@
 \newcommand{\sys}[3]{#1;#2;#3}
 
 \newcommand{\ctx}[2]{#1\langle #2\rangle}
-\newcommand{\labcall}[4]{\langle #1@#2,#3@#4 \rangle}%{\langle #1,#2,#3,#4 \rangle}
-\newcommand{\labex}[3]{#1@#2 \gg #3}
+\newcommand{\labcall}[4]{\langle #1:#2,#3:#4 \rangle}
+\newcommand{\labex}[3]{#1:#2 \gg #3}
 
 % misc
 \newcommand{\lambdaJS}{\lambda_{\mathsf{JS}}}
@@ -100,32 +103,23 @@
 \newcommand{\ltrue}{\mathsf{true}}
 \newcommand{\lacquire}[3]{#1 \uparrow #2,#3}
 \newcommand{\lrelease}[3]{#1 \downarrow #2,#3}
-\newcommand{\abstrue}{\widehat{\true}}
-\newcommand{\absfalse}{\widehat{\false}}
-\newcommand{\absunit}{\widehat{\unit}}
-\newcommand{\absundef}{\widehat{\undef}}
+\newcommand{\abstrue}{\true}
+\newcommand{\absfalse}{\false}
+\newcommand{\absunit}{\unit}
+\newcommand{\absundef}{\undef}
+\newcommand{\absrec}[1]{\langle\!| #1 |\!\rangle}
+\newcommand{\abslam}[2]{\lambda #1^{#2}}
+\newcommand{\absfuns}{\Lambda}
 
 \newcommand{\absC}{{\cal C}}
-
-% types
-\newcommand{\Base}{\mathsf{Base}}
-\newcommand{\escal}[2]{#1 \rightsquigarrow #2}
-\newcommand{\funT}[3]{#1\to #2 :: #3}
-\newcommand{\chanT}[3]{#1\triangleleft #2 :: #3}
-\newcommand{\refT}[2]{\mathsf{Ref}_{#2}(#1)}
-\newcommand{\expT}[2]{#1 :: #2}
-
-\newcommand{\gv}{\Gamma\vdash}
-\newcommand{\gvs}{\Gamma\vdash_{\rho_s}}
-
-\newcommand{\MsgPriv}[3]{\bigoplus_{#3} #1 > #2}
-\newcommand{\obranch}{\,\oplus\,}
 
 % debundling
 \newcommand{\avail}[1]{\mathit{Avail}_{#1}}
 \newcommand{\req}[1]{\mathit{Req}_{#1}}
 \newcommand{\psubst}[3]{[#1/#2]@#3}
 \newcommand{\unbundle}[3]{#1 \rhd_{#2}\, #3}
+\newcommand{\absE}{{\cal E}}
+\newcommand{\rewrite}[1]{\succ #1}
 
 % escalation
 \newcommand{\abstack}{\hat{\Upsilon}}

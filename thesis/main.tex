@@ -34,6 +34,8 @@
 %\lstset{frame=lines}
 \lstset{breaklines=true}
 \lstset{basicstyle=\ttfamily}
+\lstset{showstringspaces=false}
+
 
 \floatstyle{ruled}
 \restylefloat{table}
@@ -42,6 +44,7 @@
 \newtheorem{lemma}{Lemma}
 \newtheorem{theorem}{Theorem}
 \newtheorem{proposition}{Proposition}
+\newtheorem{assumption}{Assumption}
 
 %\DeclareExpandableDocumentCommand{\mcl2}[1]{\multicolumn{2}{l}{#1}}
 %\newcommand{\mcl3}[1]{\multicolumn{3}{l}{#1}}
@@ -68,9 +71,9 @@
 \tableofcontents
 
 %\mainmatter
-\chapter{Motivation}
+\chapter{Introduction}
 \input{motivation}
-\label{chap:Motivation}
+\label{chap:Introduction}
 
 \chapter{Background}
 \input{background}
@@ -79,20 +82,22 @@
 \chapter{Formalization}
 \input{formalization}
 \label{chap:Formalization}
+%formalizzazione e traduzzione
 
-\chapter{Abstract Domains}
-\input{abstract_domains}
-\label{chap:AbstractDom}
+%\chapter{Abstract Domains}
+%\input{abstract_domains}
+%\label{chap:AbstractDom}
+% i domini astratti vanno nella implementazione
 
 \chapter{Implementation}
 \input{implementation}
 \label{chap:Implementation}
 
-\chapter{Experiments}
+\chapter{Experiments} % share me not ... positivo
 \input{experiments}
 \label{chap:Experiments}
 
-\chapter{Conclusion}
+\chapter{Conclusion} 
 \input{conclusion}
 \label{sec:Conclusion}
 

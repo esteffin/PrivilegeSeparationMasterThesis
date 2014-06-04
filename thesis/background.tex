@@ -58,8 +58,8 @@ In table \ref{src:AManifest} we can see a manifest of a simple Chrome extension 
 \label{src:AManifest}
 \end{table}
 
-\subsection{Content script}
-Content script are Javascript source files that are automatically injected to the web page if this match with the pattern defined in the manifest. In the example of table \ref{tab:URLPatSyn} the file \texttt{myscript.js} is injected to all sub-pages of \texttt{https://moodle.dsi.unive.it/}. In the extension framework content scripts are designed to interact with the page. Since this interaction could be the entry point for an attacker, content scripts have no permissions except the one used to communicate with the extension core. In order to reduce injection of code in the content script from a malign page, there is a strong isolation between the heaps of these two. Content scripts of same extension are run together in their own address space, and the only way they have to interact with the page is via DOM API. As explained in \cite{ChromeExtSpec} browser provide one common DOM element accessed via its API and all scripts both on the page or in the extension can modify it, but only changes of the standard DOM properties are shared, while other changes are kept locally. \todo{mettere figura dell'articolo?}
+\subsection{Content scripts}
+Content scripts are Javascript source files that can be are automatically injected to the web page if this match with the pattern defined in the manifest or that can be programmatically injected by a background page using the \texttt{chrome.tabs.executeScript} call (the function require \texttt{tabs} permission). In the example of table \ref{tab:URLPatSyn} the file \texttt{myscript.js} is injected to all sub-pages of \texttt{https://moodle.dsi.unive.it/}. In the extension framework content scripts are designed to interact with the page. Since this interaction could be the entry point for an attacker, content scripts have no permissions except the one used to communicate with the extension core. In order to reduce injection of code in the content script from a malign page, there is a strong isolation between the heaps of these two. Content scripts of same extension are run together in their own address space, and the only way they have to interact with the page is via DOM API. As explained in \cite{ChromeExtSpec} browser provide one common DOM element accessed via its API and all scripts both on the page or in the extension can modify it, but only changes of the standard DOM properties are shared, while other changes are kept locally. \todo{mettere figura dell'articolo?}
 
 The message passing interface has crucial importance in this work since it is the only way for a content script to trigger execution of a privilege. We will discuss it later in \ref{subs:MPI}.
 
@@ -216,7 +216,7 @@ chrome.runtime.sendMessage(mess);
 \begin{small}
 \begin{center}
 \begin{tabular}{p{0.95\linewidth}}
-Background\\
+Unbundling checking sender\\
 \hline
 \begin{lstlisting}
 function onMessage(message, sender, response)
@@ -241,14 +241,42 @@ function onMessage(message, sender, response)
 }
 \end{lstlisting}\\
 \hline
+\hline
+Unbundling using ports.\\
+\hline
+\begin{lstlisting}
+// Handler for messages from CS1
+function onMessage_cs1(message, sender, response)
+{    	
+	/* Requests is content script 1 since it is on its port */
+	// get passwords
+	response(passwd)
+}
+// Handler for messages from CS2
+function onMessage_cs2(message, sender, response)
+{    	
+	/* Requests is content script 2 since it is on its port */
+	var host = message.host
+	var m = message.content;
+	// execute XHR on args
+}
+port_cs1.onMessage.addListener(onMessage_cs1);
+port_cs2.onMessage.addListener(onMessage_cs2);
+\end{lstlisting}\\
+\hline
 \end{tabular}
 \end{center}
 \end{small}
-\caption{Unbundled code.}
+\caption{Two unbundled code.}
 \label{tab:UnBundled}
 \end{table}
 
 \section{Flow logic}
 \label{sec:FlowLogic}
+Flow logic, introduced in \cite{FlowLogic}, is a static analysis approach that derive from state of the art in program verification and has been successfully used in research projects \cite{CarmelFlowLogic,CarmelFlowLogicFormalization}. It has its root in classical approaches of static program analysis \cite{PrincipleProgramAnalysis} like control flow analysis \cite{CMLCFA}, abstract interpretation, constraint based analysis and data flow analysis. Flow logic lets the specification to focus on when an analysis estimate is acceptable, instead of how to compute such. Another is that, like structural operational semantic that shares some properties with it, is adaptable to lots of programming paradigms. Finally it can be used with various levels of abstraction according to the implementation details that are needed and an analysis can be translated easily from one level to another. %Like the abstract interpretation  goal of the analysis is to estimate the values that an expression evaluates to. 
 
+The principal levels of abstraction are grouped in some possible approaches: abstract versus compositional and succinct versus verbose. The abstract style is more closer to standard semantic while the compositional one is more syntax directed. The succinct approach is similar to the typical style of type systems because it focuses the top part of the analysis, while the verbose approach traces all the internal information in cashes and are typical of the control flow analysis.
 
+Usually the formal analysis is done starting an abstract-succinct specification stating when an estimate is acceptable. Such specification is turned in a compositional-verbose analysis. and given to an algorithm that from a program and the analysis produces a set of classical constraints on its internal elements. Finally this set of constraint, and an abstract representation of the concrete values, are given to a worklist algorithm that computes an acceptable estimate for the program.
+
+The modularity fit very well for analysis, because the abstract succinct style is very clean and expressive without dealing with implementation details, and from such specification is easy to commute to a compositional verbose specification and from this, using a simple constraint solver like the worklist algorithm \cite{PrincipleProgramAnalysis} or a more sophisticated one like the succinct solver \cite{SuccinctSolver}, is possible to compute the estimate for a program. \todo{quale dei due?}

@@ -1,3 +1,213 @@
+\section{Analysis specification}
+\label{sec:AnalysisSpec}
+specifica dell'analisi
+
+\subsection{Abstract succinct}
+\[
+\begin{array}{llcl}
+\mathit{Abstract\ cache} & \Cat & : & \labs \rightarrow \absvalues \\
+\mathit{Abstract\ variable\ environment} & \Env & : & \vars \rightarrow \absvalues \\
+\mathit{Abstract\ memory} & \absmem & : & \labs \times \perms \rightarrow \absvalues \\
+\mathit{Abstract\ permission\ cache} & \Pat & : & \labs \rightarrow \perms \\
+\end{array}
+\]
+
+\begin{tabular}{l l l l}
+{[\textit{PV-Name}]}&\multicolumn{3}{l}{$\aenvs \modelrho n : \vat$ iff $n \in \vat$} \\
+{[\textit{PV-Var}]}&\multicolumn{3}{l}{$\aenvs \modelrho x : \vat$ iff $\Env(x) \subseteq \vat$} \\ 
+{[\textit{PV-Cons}]}&\multicolumn{3}{l}{$\aenvs \modelrho c : \vat$ iff $\{\hat{c}\} \subseteq \vat$} \\
+{[\textit{PV-Ref}]}&\multicolumn{3}{l}{$\aenvs \modelrho \ell : \vat$ iff $\ell \in \vat$} \\
+{[\textit{PV-Lambda}]}&\multicolumn{3}{l}{$\aenvs \modelrho \lam{x}{e} : \vat$ iff $\lambda_x^{\rho_e} \in \vat \wedge \aenvs \modelrho e : \vat'\gg \rho' $} \\
+&&\multicolumn{2}{l}{$\vat' \sqsubseteq \Env(\lambda x) \wedge \rho' \sqsubseteq \rho_e $}\\
+{[\textit{PV-Ref}]}&\multicolumn{3}{l}{$\aenvs \modelrho \rec{\vec{str_i : v_i}} : \vat$ iff $\{\absrec{\vec{str_i: v_i}}_{\absC,\rho}\} \sqsubseteq \hat{v}$} \\
+\end{tabular}
+
+\begin{tabular}{l l l l}
+{[\textit{PE-Val}]}&\multicolumn{3}{l}{$\caest {v}$ iff}\\
+&&\multicolumn{2}{l}{$\aenvs \modelrho v : \vat$} \\
+{[\textit{PE-Let}]}&\multicolumn{3}{l}{$\caest {\letexpr{x}{e_1}{e_2}}$ iff}\\
+&&\multicolumn{2}{l}{$\caesti {e_1} {1} \wedge \vat_1 \sqsubseteq \Env(x) \wedge \rho_1 \sqsubseteq \rho \wedge$} \\
+&&\multicolumn{2}{l}{$\aenvs \modelrho e_2 : \vat_2 \gg \rho_2 \wedge \vat_2 \sqsubseteq \vat \wedge \rho_2 \sqsubseteq \rho$} \\
+{[\textit{PE-App}]}&\multicolumn{3}{l}{$\caest {\appl {e_1} {e_2}}$ iff} \\
+&&\multicolumn{2}{l}{$\caesti {e_1} {1} \wedge$} \\
+&&\multicolumn{2}{l}{$\caesti {e_2} {2} \wedge$} \\
+&&\multicolumn{2}{l}{$\rho_1 \sqsubseteq \rho \wedge$} \\
+&&\multicolumn{2}{l}{$\rho_2 \sqsubseteq \rho \wedge$} \\
+&&\multicolumn{2}{l}{$\forall \lambda x^{\rho_e} \in \vat_1 :$}\\
+&&&$\vat_2 \subseteq \Env(x) \wedge$\\
+&&&$\Env(\lambda x) \sqsubseteq \vat \wedge$\\ 
+&&&$\rho_e \sqsubseteq \rho$\\
+{[\textit{PE-Seq}]}&\multicolumn{3}{l}{$\caest {e_1; e_2} $ iff}\\
+&&\multicolumn{2}{l}{$ \caesti {e_1} {1} \wedge $}\\
+&&\multicolumn{2}{l}{$\rho_1 \sqsubseteq \rho \wedge$} \\
+&&\multicolumn{2}{l}{$ \caesti {e_2} {2} \wedge $} \\
+&&\multicolumn{2}{l}{$\rho_2 \sqsubseteq \rho \wedge$} \\
+&&\multicolumn{2}{l}{$\vat_2 \sqsubseteq \vat$} \\
+{[\textit{PE-Op}]}&\multicolumn{3}{l}{$\caest {\op (\vec{e_i})} $ iff}\\
+&&\multicolumn{2}{l}{$\forall i :$}\\
+&&&$\caesti {e_i} {i} \wedge $\\
+&&&$\rho_i \sqsubseteq \rho \wedge$\\
+&&\multicolumn{2}{l}{$\widehat{op} (\vec{\vat_i}) \sqsubseteq \vat $}\\
+{[\textit{PE-Cond}]}&\multicolumn{3}{l}{$\caest {\cond {e_0} {e_1} {e_2}} $ iff}\\
+&&\multicolumn{2}{l}{$\caesti {e_0} {0} \wedge$}\\
+&&\multicolumn{2}{l}{$\rho_0 \sqsubseteq \rho \wedge$} \\
+&&\multicolumn{2}{l}{$\mathbf{\true} \in \vat_0 \Rightarrow$}\\
+&&&$\caesti {e_1} {1} \wedge \vat_1 \sqsubseteq \vat \wedge \rho_1 \sqsubseteq \rho \wedge$ \\
+&&\multicolumn{2}{l}{$\mathbf{\false} \in \vat_0 \Rightarrow$}\\
+&&&$\caesti {e_2} {2} \wedge \vat_2 \sqsubseteq \vat \wedge \rho_2 \sqsubseteq \rho$ \\
+{[\textit{PE-While}]}&\multicolumn{3}{l}{$\caest {\while {e_1} {e_2}} $ iff}\\
+&&\multicolumn{2}{l}{$\caesti {e_1} {1} \wedge $}\\
+&&\multicolumn{2}{l}{$\rho_1 \sqsubseteq \rho \wedge$} \\
+&&\multicolumn{2}{l}{$\mathbf{\true} \in \vat_1 \Rightarrow$}\\
+&&&$\caesti {e_2} {2} \wedge \rho_2 \sqsubseteq \rho \wedge$\\ % opinabile rispetto a lambda js
+&&\multicolumn{2}{l}{$\widehat{\false} \in \vat_1 \Rightarrow$}\\
+&&&$\widehat{\undef} \sqsubseteq \vat$\\
+\end{tabular}\newpage
+\begin{tabular} {l l l l}
+{[\textit{PE-GetField}]}&\multicolumn{3}{l}{$\caest {\lookup {e_1} {e_2}} $ iff}\\
+&&\multicolumn{2}{l}{$ \caesti {e_1} {1} \wedge $}\\
+&&\multicolumn{2}{l}{$\rho_1 \sqsubseteq \rho \wedge$} \\
+&&\multicolumn{2}{l}{$ \caesti {e_2} {2} \wedge $} \\
+&&\multicolumn{2}{l}{$\rho_2 \sqsubseteq \rho \wedge$} \\
+&&\multicolumn{2}{l}{$\widehat{get} (\vat_1, \vat_2) \sqsubseteq \vat$} \\
+{[\textit{PE-SetField}]}&\multicolumn{3}{l}{$\caest {\store {e_0} {e_1} {e_2}} $ iff}\\
+&&\multicolumn{2}{l}{$ \caesti {e_0} {0} \wedge $}\\
+&&\multicolumn{2}{l}{$\rho_0 \sqsubseteq \rho \wedge$} \\
+&&\multicolumn{2}{l}{$ \caesti {e_1} {1} \wedge $} \\
+&&\multicolumn{2}{l}{$\rho_1 \sqsubseteq \rho \wedge$} \\
+&&\multicolumn{2}{l}{$ \caesti {e_2} {2} \wedge $} \\
+&&\multicolumn{2}{l}{$\rho_2 \sqsubseteq \rho \wedge$} \\
+&&\multicolumn{2}{l}{$\widehat{set} (\vat_0, \vat_1, \vat_2) \sqsubseteq \vat$} \\
+{[\textit{PE-DelField}]}&\multicolumn{3}{l}{$\caest {\delete {e_1} {e_2}} $ iff}\\
+&&\multicolumn{2}{l}{$ \caesti {e_1} {1} \wedge$}\\
+&&\multicolumn{2}{l}{$\rho_1 \sqsubseteq \rho \wedge$} \\
+&&\multicolumn{2}{l}{$ \caesti {e_2} {2} \wedge $} \\
+&&\multicolumn{2}{l}{$\rho_2 \sqsubseteq \rho \wedge$} \\
+&&\multicolumn{2}{l}{$\widehat{del} (\vat_1, \vat_2) \sqsubseteq \vat$}\\
+{[\textit{PE-Ref}]}&\multicolumn{3}{l}{$ \caest {\newref {r} {e}}$ iff}\\
+&&\multicolumn{2}{l}{$ \caesti {e} {1} \wedge $}\\
+&&\multicolumn{2}{l}{$\rho_1 \sqsubseteq \rho\wedge$}\\
+&&\multicolumn{2}{l}{$\vat_1 \sqsubseteq \muat(r, \rho_s) \wedge $} \\
+&&\multicolumn{2}{l}{$r \in \vat$} \\
+{[\textit{PE-DeRef}]}&\multicolumn{3}{l}{$\caest {\deref {e}} $ iff}\\
+&&\multicolumn{2}{l}{$\caesti {e} {1} \wedge $}\\
+&&\multicolumn{2}{l}{$\rho_1 \sqsubseteq \rho \wedge$ }\\
+&&\multicolumn{2}{l}{$\forall r \in \vat_1 : \muat(r, \rho_s) \sqsubseteq \vat$ }\\
+{[\textit{PE-SetRef}]}&\multicolumn{3}{l}{$\caest {\setref {e_1} {e_2}} $ iff}\\
+&&\multicolumn{2}{l}{$ \caesti {e} {1} \wedge $}\\
+&&\multicolumn{2}{l}{$\rho_1 \sqsubseteq \rho \wedge$} \\
+&&\multicolumn{2}{l}{$ \caesti {e_2} {2} \wedge \rho_2 \sqsubseteq \rho \wedge$}\\
+%&&\multicolumn{2}{l}{$\rho_2 \sqsubseteq \rho \wedge$}\\
+&&\multicolumn{2}{l}{$\vat_2 \sqsubseteq \vat \wedge$}\\
+&&\multicolumn{2}{l}{$\forall r \in \vat_1: \vat_2 \sqsubseteq \muat(r, \rho_s)$}\\
+{[\textit{PE-Send}]}&\multicolumn{3}{l}{$\caesti {\send {e_1} {e_2} {\rho}} {0} $ iff}\\
+&&\multicolumn{2}{l}{$ \caesti {e} {1} \wedge $}\\
+&&\multicolumn{2}{l}{$ \rho_1 \sqsubseteq \rho_0 \wedge $}\\
+&&\multicolumn{2}{l}{$ \caesti {e} {2} \wedge $}\\
+&&\multicolumn{2}{l}{$ \rho_2 \sqsubseteq \rho_0 \wedge $}\\
+&&\multicolumn{2}{l}{$ \forall m \in \vat_1 : \forall \rho_m \sqsupseteq \rho:$}\\
+&&&$\hat{\Upsilon}(m, \rho_m) = (\rho_r, \rho_e)\wedge $\\
+&&&$\rho_r \sqsubseteq \rho_s \Rightarrow \rho_e \sqsubseteq \rho_0 \wedge$\\
+&&&$\vat_2 \sqsubseteq \hat{\Psi}(m, \rho_m) \wedge $\\
+&&&$\mathbf{unit} \in \vat $\\
+{[\textit{PE-Exercise}]}&\multicolumn{3}{l}{$\caesti {\exercise {\rho}} {1} $ iff}\\
+&&\multicolumn{2}{l}{$ \rho \sqsubseteq \rho_s \Rightarrow \rho \sqsubseteq \rho_1 \wedge $}\\
+&&\multicolumn{2}{l}{$ \mathbf{unit} \in \vat$}\\
+\end{tabular}
+
+\subsection{Compositional Verbose}
+\begin{tabular}{l l l l}
+{[\textit{CV-Val}]}&\multicolumn{3}{l}{$ \ccestl {c} $ iff $\{d_c\} \subseteq \Cat(\ell)$} \\ 
+{[\textit{CV-Var}]}&\multicolumn{3}{l}{$ \ccestl {x} $ iff $\Env(x) \subseteq \Cat(\ell)$} \\ 
+{[\textit{CV-Lambda}]}&\multicolumn{3}{l}{$ \ccestl {\lam{x}{\lbt 0}} $ iff}\\
+&&\multicolumn{2}{l}{$\{\lam{x}{\lbt 0}\} \subseteq \Cat(\ell) \wedge $}\\
+&&\multicolumn{2}{l}{$ \ccest {\lbt 0}$}\\
+{[\textit{CV-Obj}]}&\multicolumn{3}{l}{$ \ccestl {\rec{\vec{str_i : \lbt i}}}$ iff}\\
+&&\multicolumn{2}{l}{$\forall i:$}\\
+&&&$\ccest {\lbt i} \wedge$\\
+&&&$\Pat(\ell_i) \sqsubseteq \Pat(\ell) \wedge$\\ 
+&&\multicolumn{2}{l}{$\rec{\vec{str_i : \Cat(\ell_i)}} \subseteq \Cat_\ell $} \\
+{[\textit{CV-Let}]}&\multicolumn{3}{l}{$ \ccestl {\letexprs{x_i}{\lbt i}{{e'}^{\ell'}}}$ iff}\\
+&&\multicolumn{2}{l}{$ \ccest {{e'}^{\ell'}} \wedge$} \\
+&&\multicolumn{2}{l}{$ \Pat(\ell') \sqsubseteq \Pat(\ell) \wedge$}\\
+&&\multicolumn{2}{l}{$ \Cat(\ell') \subseteq \Cat(\ell) \wedge$}\\
+&&\multicolumn{2}{l}{$ \forall i:$}\\
+&&&$\ccest {{e_i}^{\ell_i}} \wedge$ \\
+&&& $ \Cat(\ell_i) \subseteq \Env(x_i) \wedge$ \\
+&&& $ \Pat(\ell_i) \sqsubseteq \Pat(\ell) $ \\
+{[\textit{CV-App}]}&\multicolumn{3}{l}{$ \ccestl {\appl {\lbt 1} {\lbt 2}}$ iff}\\
+&&\multicolumn{2}{l}{$\ccest {\lbt 1} \wedge \ccest {\lbt 2} \wedge$} \\
+&&\multicolumn{2}{l}{$\Pat(\ell_1) \sqsubseteq \Pat(\ell) \wedge \Pat(\ell_2) \sqsubseteq \Pat(\ell)$} \\
+&&\multicolumn{2}{l}{$\forall (\lam{x}{\lbt 0}) \in \Cat(\ell_1) :$}\\
+&&&$\Cat(\ell_2) \subseteq \Env(x) \wedge \Cat(\ell_0) \subseteq \Cat(\ell) \wedge$\\
+&&&$\Pat(\ell_0) \sqsubseteq \Pat(\ell) $\\
+{[\textit{CV-Op}]}&\multicolumn{3}{l}{$ \ccestl {\op (\vec{\lbt i})} $ iff}\\
+&&\multicolumn{2}{l}{$\forall i :$}\\
+&&&$\ccest {\lbt i} \wedge $\\
+&&&$\Pat(\ell_i) \sqsubseteq \Pat(\ell) \wedge$\\
+&&\multicolumn{2}{l}{$\widehat{op} (\Cat(\ell_i)) \subseteq \Cat(\ell) $}\\
+{[\textit{CV-Cond}]}&\multicolumn{3}{l}{$\ccestl{\cond {\lbt 0} {\lbt 1} {\lbt 2}} $ iff}\\
+&&\multicolumn{2}{l}{$ \ccest {\lbt 0} \wedge $}\\
+&&\multicolumn{2}{l}{$\Pat(\ell_0) \sqsubseteq \Pat(\ell) \wedge$} \\
+&&\multicolumn{2}{l}{$\widehat{\true} \in \Cat(\ell_0) \Rightarrow$}\\
+&&&$\ccest {\lbt 1} \wedge \Cat(\ell_1) \subseteq \Cat(\ell)\wedge$\\
+&&&$\Pat(\ell_1) \sqsubseteq \Pat(\ell) \wedge$ \\
+&&\multicolumn{2}{l}{$\widehat{\false} \in \Cat(\ell_0) \Rightarrow$}\\
+&&&$\ccest {\lbt 2} \wedge \Cat(\ell_2) \subseteq \Cat(\ell) \wedge$\\
+&&&$\Pat(\ell_2) \sqsubseteq \Pat(\ell)$ \\
+{[\textit{CV-While}]}&\multicolumn{3}{l}{$\ccestl {\while {\lbt 1} {\lbt 2}} $ iff}\\
+&&\multicolumn{2}{l}{$ \ccest {\lbt 1} \wedge $}\\
+&&\multicolumn{2}{l}{$\Pat(\ell_1) \sqsubseteq \Pat(\ell) \wedge$} \\
+&&\multicolumn{2}{l}{$\widehat{\true} \in \Cat(\ell_1) \Rightarrow$}\\
+&&&$\ccest {\lbt 2} \wedge \Cat(\ell_2) \subseteq \Cat(\ell) \wedge$\\
+&&&$ \Pat(\ell_2) \sqsubseteq \Pat(\ell) \wedge$\\
+&&\multicolumn{2}{l}{$\widehat{\false} \in \Cat(\ell_1) \Rightarrow \widehat{\undef} \subseteq \Cat(\ell)$}\\
+\end{tabular}
+
+\begin{tabular} {l l l l}
+{[\textit{CV-GetField}]}&\multicolumn{3}{l}{$\ccestl {\lookup {\lbt 1} {\lbt 2}} $ iff}\\
+&&\multicolumn{2}{l}{$ \ccest {\lbt1} \wedge $}\\
+&&\multicolumn{2}{l}{$\Pat(\ell_1) \sqsubseteq \Pat(\ell) \wedge$} \\
+&&\multicolumn{2}{l}{$ \ccest {\lbt 2} \wedge $} \\
+&&\multicolumn{2}{l}{$\Pat(\ell_2) \sqsubseteq \Pat(\ell) \wedge$} \\
+&&\multicolumn{2}{l}{$\widehat{get} (\Cat(\ell_1), \Cat(\ell_2)) \subseteq \Cat(\ell)$} \\
+{[\textit{CV-SetField}]}&\multicolumn{3}{l}{$\ccestl {\store {\lbt 0} {\lbt 1} {\lbt 2}} $ iff}\\
+&&\multicolumn{2}{l}{$ \ccest {\lbt 0} \wedge $}\\
+&&\multicolumn{2}{l}{$\Pat(\ell_0) \sqsubseteq \Pat(\ell) \wedge$} \\
+&&\multicolumn{2}{l}{$ \ccest {\lbt 1} \wedge $} \\
+&&\multicolumn{2}{l}{$\Pat(\ell_1) \sqsubseteq \Pat(\ell) \wedge$} \\
+&&\multicolumn{2}{l}{$ \ccest {\lbt 2} \wedge $} \\
+&&\multicolumn{2}{l}{$\Pat(\ell_2) \sqsubseteq \Pat(\ell) \wedge$} \\
+&&\multicolumn{2}{l}{$\widehat{set} (\Cat(\ell_0), \Cat(\ell_1), \Cat(\ell_2)) \subseteq \Cat(\ell)$} \\
+{[\textit{CV-DelField}]}&\multicolumn{3}{l}{$\ccestl {\delete {\lbt 1} {\lbt 2}} $ iff}\\ 
+&&\multicolumn{2}{l}{$ \ccest {\lbt 1} \wedge $}\\
+&&\multicolumn{2}{l}{$\Pat(\ell_1) \sqsubseteq \Pat(\ell) \wedge$} \\
+&&\multicolumn{2}{l}{$ \ccest {\lbt 2} \wedge $} \\
+&&\multicolumn{2}{l}{$\Pat(\ell_2) \sqsubseteq \Pat(\ell) \wedge$} \\
+&&\multicolumn{2}{l}{$\widehat{del} (\Cat(\ell_1), \Cat(\ell_2)) \subseteq \Cat(\ell)$}\\
+{[\textit{CV-Ref}]}&\multicolumn{3}{l}{$ \ccestl {\newref {r,\rho_r} {\lbt 1}} $ iff}\\
+&&\multicolumn{2}{l}{$\ccest {\lbt 1} \wedge $}\\
+&&\multicolumn{2}{l}{$\{r\} \subseteq \Cat(\ell) \wedge$}\\
+&&\multicolumn{2}{l}{$\Pat(\ell_1) \sqsubseteq \Pat(\ell) \wedge$}\\
+&&\multicolumn{2}{l}{$\rho_r \sqsubseteq \rho_s \Rightarrow \Cat(\ell_1) \subseteq \muat(r, \rho_r) $}\\
+{[\textit{CV-DeRef}]}&\multicolumn{3}{l}{$\ccestl {\deref {\lbt 1}} $ iff}\\
+&&\multicolumn{2}{l}{$ \ccest {\lbt 1}\wedge $}\\
+&&\multicolumn{2}{l}{$\Pat(\ell_1) \sqsubseteq \Pat(\ell) \wedge$}\\
+&&\multicolumn{2}{l}{$\forall r \in \Cat(\ell_1) : \forall \rho_r \sqsubseteq \rho_s :$}\\
+&&&$\muat(r, \rho_r) \subseteq \Cat(\ell)$ \\
+{[\textit{CV-SetRef}]}&\multicolumn{3}{l}{$\ccestl {\setref {\lbt 1} {\lbt 2}} $ iff}\\
+&&\multicolumn{2}{l}{$ \ccest {\lbt 1} \wedge $}\\
+&&\multicolumn{2}{l}{$ \Pat(\ell_1) \sqsubseteq \Pat(\ell) \wedge $}\\
+&&\multicolumn{2}{l}{$ \ccest {\lbt 2} \wedge $}\\
+&&\multicolumn{2}{l}{$ \Pat(\ell_2) \sqsubseteq \Pat(\ell) \wedge $}\\
+&&\multicolumn{2}{l}{$ \forall r \in \Cat(\ell_1) : \forall \rho_r \sqsubseteq \rho_s :$}\\
+&&&$\Cat(\ell_2) \subseteq \muat(r, \rho_r) \wedge$ \\
+&&\multicolumn{2}{l}{$\Cat(\ell_2) \subseteq \Cat(\ell) $} \\
+{[\textit{PE-Send}]}& \dots \\
+{[\textit{PE-Err}]}& \dots \\
+{[\textit{PE-Exercise}]}& \dots \\
+\end{tabular}
+
 \section{Constraint generation}
 \label{sec:ConstraintGen}
 \newcommand{\genl}[1]{\mathcal{C}_{*\rho_s}\llbracket (#1)^\ell \rrbracket}
@@ -126,6 +336,73 @@ lambda_* & $is the set of all lambdas of the program;$\\
 
 \section{Constraint solving}
 \label{sec:ConstraintSolving}
+
+\section{Abstract domains choice} % scelta dei domini astratti
+\label{sec:AbstractDomChoice}
+
+$ R_1=\rec{\vec{\widehat{str_i}:\widehat{v_i}}} \sqsubseteq \rec{\vec{\widehat{str_j}:\widehat{v_j}}}=R_2 $ sse:
+\begin{enumerate}
+\item $R_1$ ha meno campi di $R_2$
+\item ogni campo di $R_1$ e' piu' preciso del \textbf{corrispondente} campo di $R_2$ 
+\end{enumerate}
+
+$\forall i, \exists j: \widehat{str_i} \sqsubseteq \widehat{str_j}$\\
+$\forall i, \exists j: \widehat{str_i} \sqsubseteq \widehat{str_j} \Rightarrow \widehat{v_i} \sqsubseteq \widehat{v_j}$
+
+Set:
+\begin{itemize}
+\item Exact
+	\begin{itemize}
+	\item $\exists \rightarrow Union$
+	\item $\nexists \rightarrow add in prefix$
+	\end{itemize}
+\item Prefix
+	\begin{itemize}
+	\item aggiungo in $*$
+	\end{itemize}
+\end{itemize}
+
+$\vat \sqsubseteq \vat'$ iff $\forall \widehat{u}_i \in \vat, \exists \widehat{u}_j \in \vat': \widehat{u}_i \sqsubseteq \widehat{u}_j $.\\
+If Galois connection then \\
+$\vat \sqsubseteq \vat'$ iff $\gamma(\vat) \subseteq \gamma(\vat') $\\
+where $\gamma : \widehat{V} \rightarrow P(V)$ is the concretisation function.\\
+$\gamma_p : \widehat{PV} \rightarrow P(V)$\\
+$\gamma(\vat) = \bigcup_{\widehat{u}_i \in \vat} \gamma_p(\widehat{u}_i)$\\
+\newpage
+$
+\begin{array}{ll}
+\widehat{pre_{bool}} = \widehat{true} | \widehat{false}\\
+\widehat{u_{bool}} = \{\vec{\widehat{pre_{bool}}}\}&$ with $\sqsubseteq = \subseteq\\
+\widehat{pre_{int}} = \oplus | 0 | \ominus\\
+\widehat{u_{int}} = \{\vec{\widehat{pre_{int}}}\}&$ with $\sqsubseteq = \subseteq\\
+\widehat{pre_{string}} = s | s*\\
+\widehat{u_{string}} = \{\vec{\widehat{pre_{string}}}\}&$ with $\sqsubseteq = \subseteq\\
+&$ --- Giulia's spec. is more tricky than $\subseteq\\
+\widehat{pre_{ref}} = r\\
+\widehat{u_{ref}} = \{\vec{\widehat{pre_{ref}}}\}&$ with $\sqsubseteq = \subseteq\\
+\widehat{pre_\lambda} = \lambda\\
+\widehat{u_\lambda} = \{\vec{\widehat{pre_\lambda}}\}&$ with $\sqsubseteq = \subseteq\\
+\widehat{pre_{rec}} = \rec{\vec{\widehat{str}_i: \vat_i}}\\
+\widehat{u_{rec}} = \widehat{pre_{rec}}&$ with $ \sqsubseteq = \widehat{u_{rec}}_\sqsubseteq\\
+\vat = (\widehat{u_{bool}}, \widehat{u_{int}}, \widehat{u_{string}}, \widehat{u_{ref}}, \widehat{u_{\lambda}}, \widehat{u_{rec}}, \{\widehat{Null}\}, \{\widehat{Undef}\})\\
+&$ with $ \vat \sqsubseteq \vat' $ iff $ \\
+&\widehat{u_{bool}} \sqsubseteq \widehat{u_{bool}}' \wedge\\
+&\widehat{u_{int}} \sqsubseteq \widehat{u_{int}}' \wedge\\
+&\widehat{u_{string}} \sqsubseteq \widehat{u_{string}}' \wedge\\
+&\widehat{u_{ref}} \sqsubseteq \widehat{u_{ref}}' \wedge\\
+&\widehat{u_{\lambda}} \sqsubseteq \widehat{u_{\lambda}}' \wedge\\
+&\widehat{u_{rec}} \sqsubseteq \widehat{u_{rec}}' \wedge\\
+&\widehat{Null} \not\in \vat' \vee \widehat{Null} \in \vat \wedge \widehat{Null} \in \vat' \wedge\\
+&\widehat{Undef} \not\in \vat' \vee \widehat{Undef} \in \vat \wedge \widehat{Undef} \in \vat'\\
+\end{array}
+$
+
+
+\section{Abstract operations} %- specifica delle operazioni astratte
+\label{sec:AbstractOp}
+
+\section{Requirements verification} % verifica delle condizioni (anche semi-formale)
+\label{sec:RequirementVerif}
 
 \section{Implementation-specific details}
 \label{sec:ImplSpecDetails}
