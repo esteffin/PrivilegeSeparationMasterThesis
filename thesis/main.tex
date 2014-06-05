@@ -1,4 +1,4 @@
-\documentclass[12pt,a4paper,twoside,openright,draft]{report} %thesis
+\documentclass[12pt,a4paper,twoside,openright]{report} %thesis
 
 \usepackage[utf8]{inputenc}
 \usepackage[english]{babel}
@@ -25,6 +25,7 @@
 \usepackage[textsize=footnotesize,backgroundcolor=white,linecolor=black]{todonotes}
 \usepackage[final]{listings}
 \usepackage{tabularx}
+\usepackage{pdfpages}
 
 \lstset{language=ml}
 \lstset{commentstyle=\textit}
@@ -61,8 +62,10 @@
 \begin{document}
 %\frontmatter
 
-\maketitle
+%\maketitle
+\includepdf{Frontespizio.pdf}
 \listoftables
+\listoftodos
 
 \begin{abstract}
 \input{abstract}
