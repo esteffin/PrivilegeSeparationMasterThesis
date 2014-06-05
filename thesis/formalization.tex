@@ -1,5 +1,5 @@
 \newcommand{\ljs}{$\lambda_{JS}$}
-This chapter is about the formal part of the work and explain the calculus, the safety property, the analysis specification, theorem and requirements for correctness. It is part of the work done developed together with Stefano Calzavara.
+This chapter is about the formal part of the work and explain the calculus, the safety property, the analysis specification, theorem and requirements for correctness. It is part of the work done together with Stefano Calzavara.
 %calcolo e proprieta' di sicurezza by Stefano
 
 \section{Calculus}
@@ -9,7 +9,9 @@ In this section we introduce the language used to study privilege escalation. Th
 \subsection{Syntax}
 Now we introduce the syntax of our calculus starting from values, expressions, memories, handlers, instances and systems. We then have a example to show how it works.
 
-We assume denumerable sets of names $\names$ (ranged over by $a,b,m,n$) and variables $\vars$ (ranged over by $x,y,z$). Variable can be bounded or unbounded according to the environment on which they appears; we say that a variable is free in an expression if the environment in which it appears do not contains a binding with it; we say also that a phrase of syntax $\phi$ is \emph{closed} iff $\fv(\phi) = \emptyset$. We let $c$ range over constants, including numbers, strings, boolean values, unit and the ``undefined'' value; we also let $r$ range over references in $\refs$, i.e., memory locations. The calculus is parametric with respect to an arbitrary lattice of permissions $(\perms,\sqsubseteq)$ and we let $\rho$ range over $\perms$. Finally, we assume a denumerable set of labels $\labs$ (ranged over by $\ell$) to support our static analysis. All the sets above are assumed pairwise disjoint.
+We assume denumerable sets of names $\names$ (ranged over by $a,b,m,n$) and variables $\vars$ (ranged over by $x,y,z$). We let $c$ range over constants, including numbers, strings, boolean values, unit and the ``undefined'' value; we also let $r$ range over references in $\refs$, i.e., memory locations. The calculus is parametric with respect to an arbitrary lattice of permissions $(\perms,\sqsubseteq)$ and we let $\rho$ range over $\perms$. Finally, we assume a denumerable set of labels $\labs$ (ranged over by $\ell$) to support our static analysis. All the sets above are assumed pairwise disjoint.
+
+\todo[inline]{ref lintent bound and free}
 
 \subsubsection{Values.}
 We let $u,v$ range over \emph{values}, defined by the following productions:
@@ -17,7 +19,7 @@ We let $u,v$ range over \emph{values}, defined by the following productions:
 c & ::= \mathit{num} ~|~ \mathit{str} ~|~ \mathit{bool} ~|~ \unit ~|~ \undef, \\
 u,v &::= n ~|~ x ~|~ c ~|~ r_{\ell} ~|~ \lam{x}{e} ~|~ \rec{\vec{str_i:v_i}}.
 \end{align*}
-All the forms above are standard. Notice that references bear a label $\ell$, identifying the program point where they are created (see below). This is just needed for our static analysis and plays no role in the semantics. For simplicity, we consider only \emph{closed} record values. This means that all syntax phrases do not have any free variable. Fortunately this does not involve any loss of expressiveness.
+All the forms above are standard. Notice that references bear a label $\ell$, identifying the program point where they are created (see below). This is just needed for our static analysis and plays no role in the semantics. For simplicity, we consider only \emph{closed} record values, i.e., without free variables. Fortunately this does not involve any loss of expressiveness.
 
 \begin{definition}[Serializable Value]
 \label{def:serializable}
@@ -303,7 +305,7 @@ We discuss some important points: in rule \irule{JS-PrimOp} we assume a $\delta$
 \label{tab:lambdajs}
 \end{table}
 
-\subsection{Definitions}
+\subsection{Safety despite compromise}
 \todo {nome sezione!!}
 \begin{definition}[Exercise]
 \label{def:exercise}
@@ -760,7 +762,7 @@ registered by the opponent may receive any value (2) and (3).
 For our running example, we are able to analyse the code with respect
 to the abstract stack $\abstack$ such that: $\abstack(cs1, CS1) =
 (\top,\rho \join \rho')$ and $\abstack(cs2,CS2) = (\top,\rho \join
-\rho')$ and $\abstack(b,B) = (CS1 \meet CS2,\rho \join \rho')$.
+\rho')$ and $\abstack(b,B) = (CS1 \meet CS2,\rho \join \rho')$. \todo{migliorare}
 
 \section{Theorem}
 \label{sec:Theorem}
