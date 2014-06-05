@@ -337,6 +337,114 @@ lambda_* & $is the set of all lambdas of the program;$\\
 \section{Constraint solving}
 \label{sec:ConstraintSolving}
 
+\begin{table}[htb]
+\small
+\begin{center}
+\begin{tabular}{l l l}
+INPUT: & $C_*[e_*]$\\
+OUTPUT: & $(cat, ro)$\\
+METHOD: &
+Step 1:& Initialization\\
+&&
+\begin{lstlisting}[mathescape]
+W := [] : Queue(CElem)
+D := [] : Map(CElem -> $\hat{V}$)
+E := [] : Map(CElem -> Constraint)
+for a in cache do 
+    Add (C a, $\bot$) D
+    Add (C a, []) E
+for x in vars do 
+    Add (R x, $\bot$) D
+    Add (R x, []) E
+for r in refs do 
+    Add (Mu ($\bot$, $\ell$), $\bot$) D
+    Add (Mu ($\bot$, $\ell$), []) E
+\end{lstlisting}\\
+&Step 2: & Building the graph\\
+&&
+\begin{lstlisting}[mathescape]
+for cc in lst do
+    case cc of
+    | {t} $\sqsubseteq$ p  -> 
+      propagate p {t}
+    | p1  $\sqsubseteq$ p2 -> 
+      Add cc E[p1]
+    | {t} $\sqsubseteq$ p $\Rightarrow$ p1 $\sqsubseteq$ p2 -> 
+      Add cc E[p]
+      Add cc E[p1]
+    | {t} $\sqsubseteq$ p $\Rightarrow$ {t1} $\sqsubseteq$ p2 -> 
+      Add cc E[p]
+    | $\widehat{op}(\vec{ps}) \sqsubseteq$ p1  -> 
+      for p in ps do
+        Add cc E[p]
+    | $\widehat{Get}$(p1, p2) $\sqsubseteq$ p3 -> 
+      Add cc E[p1]
+      Add cc E[p2]
+    | $\widehat{Del}$(p1, p2) $\sqsubseteq$ p3 -> 
+      Add cc E[p1]
+      Add cc E[p2]
+    | $\widehat{Set}$(p1, p2, p3) $\sqsubseteq$ p4 -> 
+      Add cc E[p1]
+      Add cc E[p2]
+      Add cc E[p3]
+\end{lstlisting}\\
+\end{tabular}
+\end{center}
+\caption{Worklist Algorithm part 1.}
+\label{tab:Worklist1}
+\end{table}
+\begin{table}[htb]
+\small
+\begin{center}
+\begin{tabular}{l l l}
+&Step 3: & Iteration\\
+&&
+\begin{lstlisting}[mathescape]
+while W $\neq$ [] do
+    q = dequeue W
+    for cc in E[q] do
+        case cc of
+        | p1  $\sqsubseteq$ p2 -> 
+            propagate p2 D[p1]
+        | {t} $\sqsubseteq$ p $\Rightarrow$ p1 $\sqsubseteq$ p2 -> 
+            if t $\in$ D[p] then
+                propagate p2 D[p1]
+        | {t} $\sqsubseteq$ p $\Rightarrow$ {t1} $\sqsubseteq$ p2 ->
+            if t $\in$ D[p] then
+                propagate p2 {t1}
+        | $\widehat{op}(\vec{ps}) \sqsubseteq$ p1  -> 
+            args = [D[p] | p $\in \vec{ps}$]
+            res = $\widehat{op}$ args
+            propagate p1 res
+        | $\widehat{Get}$(p1, p2) $\sqsubseteq$ p3 -> 
+            propagate p3 $\widehat{Get}$ (D[p1], D[p2]) 
+        | $\widehat{Del}$(p1, p2) $\sqsubseteq$ p3 -> 
+            propagate p3 $\widehat{Del}$ (D[p1], D[p2]) 
+        | $\widehat{Set}$(p1, p2, p3) $\sqsubseteq$ p4 -> 
+            propagate p4 $\widehat{Set}$ (D[p1], D[p2]. D[p3]) 
+\end{lstlisting}\\
+& Step 4: & Recording the solution\\
+&&
+\begin{lstlisting}[mathescape]
+for $\ell$ in $Ref_*$ do $\hat{\mu}(\ell)$ = D[Mu $\ell$]
+for x in $Var_*$ do $\hat{\Gamma}(\ell)$ = D[R x]
+for $\alpha$ in $Cache_*$ do $\hat{C}(\alpha)$ = D[C $\alpha$]
+\end{lstlisting}\\
+USING: \\
+&&
+\begin{lstlisting}[mathescape]
+propagate q d =
+    if d $\not\sqsubseteq$ D[q] then
+        D[q] = D[q] $\join$ d
+        Enqueue q W
+    
+\end{lstlisting}\\
+\end{tabular}
+\end{center}
+\caption{Worklist Algorithm part 2.}
+\label{tab:Worklist2}
+\end{table}
+
 \section{Abstract domains choice} % scelta dei domini astratti
 \label{sec:AbstractDomChoice}
 

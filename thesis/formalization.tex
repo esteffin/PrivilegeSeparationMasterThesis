@@ -1,20 +1,23 @@
+\newcommand{\ljs}{$\lambda_{JS}$}
 This chapter is about the formal part of the work and explain the calculus, the safety property, the analysis specification, theorem and requirements for correctness. It is part of the work done developed together with Stefano Calzavara.
 %calcolo e proprieta' di sicurezza by Stefano
 
 \section{Calculus}
 \label{sec:Calculus}
-In this section we introduce the language used to study privilege escalation. The core of the calculus models Javascript essential features and is a subset of $\lambda_{JS}$. $\lambda_{JS}$ is a Scheme dialect described in \cite{LambdaJS} and studied in \cite{Strobe} and \cite{LambdaJSMightVanHorn} used to desugar Javascript in order to simplify it in few construct with easy semantic behavior. It admit functions, object (i.e., records) and mutable references. Here we are not using exceptions and break statements for the sake of simplicity. On the other hand, specific constructs are added to explicitly deal with privilege-based access control and privilege escalation. We rely on a channel-based communication model based on asynchronous message exchanges and handlers. \todo{modificato un po'}
+In this section we introduce the language used to study privilege escalation. The core of the calculus models Javascript essential features and is a subset of \ljs. \ljs is a Scheme dialect described in \cite{LambdaJS} and used to desugar Javascript in order to simplify it in few construct with easy semantic behavior. It has been used to do static analysis on Javascript code in \cite{Strobe} and \cite{LambdaJSMightVanHorn}. It admit functions, object (i.e., records) and mutable references. Here we are not using exceptions and break statements for the sake of simplicity. On the other hand, we added specific constructs to explicitly deal with privilege-based access control and privilege escalation. We rely on a channel-based communication model based on asynchronous message exchanges and handlers. Send expression and its corresponding handler are similar to the ones used in \cite{Lintent}. \todo{modificato un po'}
 
 \subsection{Syntax}
-We assume denumerable sets of names $\names$ (ranged over by $a,b,m,n$) and variables $\vars$ (ranged over by $x,y,z$). We let $c$ range over constants, including numbers, strings, boolean values, unit and ``undefined''; we also let $r$ range over references in $\refs$, i.e., memory locations. The calculus is parametric with respect to an arbitrary lattice of permissions $(\perms,\sqsubseteq)$ and we let $\rho$ range over $\perms$. Finally, we assume a denumerable set of labels $\labs$ (ranged over by $\ell$) to support our static analysis. All the sets above are assumed pairwise disjoint. \todo{lasciato uguale}
+Now we introduce the syntax of our calculus starting from values, expressions, memories, handlers, instances and systems. We then have a example to show how it works.
 
-\paragraph*{Values.} 
+We assume denumerable sets of names $\names$ (ranged over by $a,b,m,n$) and variables $\vars$ (ranged over by $x,y,z$). Variable can be bounded or unbounded according to the environment on which they appears; we say that a variable is free in an expression if the environment in which it appears do not contains a binding with it; we say also that a phrase of syntax $\phi$ is \emph{closed} iff $\fv(\phi) = \emptyset$. We let $c$ range over constants, including numbers, strings, boolean values, unit and the ``undefined'' value; we also let $r$ range over references in $\refs$, i.e., memory locations. The calculus is parametric with respect to an arbitrary lattice of permissions $(\perms,\sqsubseteq)$ and we let $\rho$ range over $\perms$. Finally, we assume a denumerable set of labels $\labs$ (ranged over by $\ell$) to support our static analysis. All the sets above are assumed pairwise disjoint.
+
+\subsubsection{Values.}
 We let $u,v$ range over \emph{values}, defined by the following productions:
 \begin{align*}
 c & ::= \mathit{num} ~|~ \mathit{str} ~|~ \mathit{bool} ~|~ \unit ~|~ \undef, \\
 u,v &::= n ~|~ x ~|~ c ~|~ r_{\ell} ~|~ \lam{x}{e} ~|~ \rec{\vec{str_i:v_i}}.
 \end{align*}
-All the forms above are standard. Notice that references bear a label $\ell$, identifying the program point where they are created (see below). This is just needed for our static analysis and plays no role in the semantics. For simplicity, we consider only \emph{closed} record values: this does not involve any loss of expressiveness.\todo{the restriction to closed record values is useful for the substitution lemma and opponent acceptability. the next definition of serializable value is used to prevent functions from being communicated through the message passing interface (cf. R-Sync), which either breaks the substitution lemma or opponent acceptability: that justifies also the more restrictive treatment of references.}
+All the forms above are standard. Notice that references bear a label $\ell$, identifying the program point where they are created (see below). This is just needed for our static analysis and plays no role in the semantics. For simplicity, we consider only \emph{closed} record values. This means that all syntax phrases do not have any free variable. Fortunately this does not involve any loss of expressiveness.
 
 \begin{definition}[Serializable Value]
 \label{def:serializable}
@@ -24,8 +27,9 @@ A value $v$ is \emph{serializable} if and only if:
 \item $v = \rec{\vec{str_i:v_i}}$ and each $v_i$ is serializable.
 \end{itemize}
 \end{definition}
+This means that a serializable value are only names, constants references and record containing only serializable values. Functions and variables cannot be serialized. This fits the model of Chrome extension message passing interface described in \ref{subs:MPI} because it let only to send JSON-serialized objects, or strings.
 
-\paragraph*{Expressions.} 
+\subsubsection{Expressions.} 
 We let $e$ range over \emph{expressions}, defined by the following productions:
 \[
 \begin{array}{lcl}
@@ -43,7 +47,7 @@ with the program point where it has been created will be useful for our
 static analysis (actually to deal with reference creation within
 loops).
 
-We discuss the non-standard expressions.  The expression
+We discuss the non-standard expressions. The expression
 $\send{a}{v}{\rho}$ sends the value $v$ on channel $a$: the value can
 be received by any handler listening on $a$, provided that it is
 granted permission $\rho$ (this allows the sender to protect the
@@ -51,34 +55,36 @@ message). The expression $\exercise{\rho}$ exercises the permission
 $\rho$. Indeed, in order to keep simple the calculus and to more
 clearly state our security property, we abstract any
 security sensitive expression (such as the call of a function library)
-with the generic exercise of the correspondent privilege. 
+with the generic exercise of the correspondent privilege. So, since the execution of a privilege is only used in API calls, the $\exercise{\rho}$ expression is placed in such libraries just for marking such permission execution.
 
-\paragraph*{Memories.}
+\subsubsection{Memories.}
 We let $\mu$ range over \emph{memories}, defined by the following productions:
 \[
 \mu ::= \emptyset ~|~ \mu, \map{r_{\ell}}{\rho}{v}.
 \]
 A memory is a partial map from (labelled) references to values, implementing an access control policy. Specifically, if $\map{r_{\ell}}{\rho}{v} \in \mu$, then permission $\rho$ is required to have read/write access on the reference $r$ in $\mu$. Given a memory $\mu$, we let $\dom(\mu) = \{r ~|~ \map{r_{\ell}}{\rho}{v} \in \mu\}$.
 
-\paragraph*{Handlers.} 
+\subsubsection{Handlers.} 
 We let $h$ range over multisets of \emph{handlers}, defined by the following productions:
 \[
 h ::= \emptyset ~|~ h,\handler{a}{x}{\rho}{e}{\rho'}.
 \]
 The handler $\handler{a}{x}{\rho}{e}{\rho'}$ is an expression $e$, which is granted permission $\rho'$. The handler is guarded by a channel $a$, which requires permission $\rho$ for write access: this allows the receiver to be protected against untrusted senders. When a message is sent over $a$, the expression $e$ will be disclosed and a new \emph{instance} of the handler is created.
 
-\paragraph*{Instances.} 
+In other world when a $\send{a}{v}{\rho_s}$ is executed all handler $\handler{a}{x}{\rho}{e}{\rho'}$ on channel $a$ with permission $\rho \sqsubseteq \rho_s$ are triggered. Triggering a handler means that the message $v$ is bound to $x$ in the environment of $e$ and $e$ is executed in a new \emph{instance}.
+
+\subsubsection{Instances.} 
 We let $i$ range over pools of running \emph{instances}, i.e., the active part of a system which is spawned when a message is received by an handler. An instance is a running expression, which is granted a set of permissions. Instances are multisets defined as follows:
 \[
 i,j ::= \emptyset ~|~ i,\inst{a}{e}{\rho}
 \]
 Instances are annotated with the channel name corresponding to the handler which spawned them: this is convenient for our static analysis, but it is not important for the semantics.
 
-\paragraph*{Systems.} 
-A \emph{system} is defined as a triple $s = \sys{\mu}{h}{i}$.
+\subsubsection{Systems.} 
+A \emph{system} is defined as a triple $s = \sys{\mu}{h}{i}$. It is the representation of a running extension in a certain moment. Its components are the memory $\mu$ that contains all the data referenced in the program, all the handler registered in it and all the running instances: listeners that have been triggered and that have not yet finished their execution.
 
 
-\paragraph{Example:}
+\subsubsection{Example.}
 Handlers can be used to model the single entry point of a Chrome component, which is represented by the the function \texttt{onMessage}. To understand the programming model, let's consider a simple protocol:
 \[
 \begin{array}{l}
@@ -87,7 +93,8 @@ B \rightarrow A: y \\
 A \rightarrow B: \rec{tag: "okay", other: z}
 \end{array}
 \]
-In Chrome, and in $\lambda_{JS}$, the component $B$ is programmed more or less as in table \ref{tab:OnMessageCalc}. \todo{OK?}
+Here the component A sends to B a message containing $\rec{tag: "init", val: x}$. Then B reply to A with $y$ and finally A respond to B with $\rec{tag: "okay", other: z}$
+In Chrome, and in \ljs, the handler of the component $B$ is programmed more or less as in table \ref{tab:OnMessageCalc}. \todo{OK?}
 
 \begin{table}[tlb]
 \begin{small}
@@ -108,33 +115,38 @@ void onMessage (Message m) {
 \end{lstlisting}\\
 \hline
 \hline
-$\lambda_{JS}$\\
+\ljs\\
 \hline
 \lstset{language=ml}
 \begin{lstlisting}
-a(m <| SEND: BACK).
-	if (== (m["tag"], "init"))
-		process_request (m["val"])
+a(x <| SEND: BACK).
+	if (== (x["tag"], "init"))
+	{	
+		process_request (x["val"])
 		exercise(rho)
-	else if (== (m["tag"], "okay"))
-		process_other (m["other"])
+	}
+	else if (== (x["tag"], "okay"))
+	{
+		process_other (x["other"])
 		exercise(rho')
+	}
 	else
 		do_nothing
 \end{lstlisting}
 \end{tabular}
 \end{center}
 \end{small}
-\caption{onMessage handler in Javascript and in $\lambda_{JS}$}
+\caption{onMessage handler in Javascript and in \ljs}
 \label{tab:OnMessageCalc}
 \end{table}
 
 
-\subsection{Semantics}
+\section{Semantics}
+In this section we introduce the semantic of our calculus.
 The small-step operational semantics is defined in terms of a labelled
 reduction relation between systems, i.e., $s \xra{\alpha} s'$, and an
 auxiliary reduction relation between expressions that is directly inherited
-from $\lambda_{JS}$, i.e.,  $\mu;e \hra_\rho \mu';e'$. We associate
+from $\lambda_{JS}$ \cite{LambdaJS}, i.e.,  $\mu;e \hra_\rho \mu';e'$. We associate
 labels to reduction steps just to easily state our security property and 
 to provide additional informations in the proofs, however labels have no 
 impact on the semantics.
@@ -206,7 +218,7 @@ name. Hence, there might be two references with the same label but
 different names, but no pair of references with the same name and two
 different labels.
 
-We discuss some important points: in rule \irule{JS-PrimOp} we assume a $\delta$ function, which defines the behaviour of primitives operations. In rule \irule{JS-Ref} we ensure that running instances can only create memory cells they can access; in rule \irule{JS-Deref} and \irule{JS-SetRef} we perform the expected access control checks.\todo{For simplicity we exclude the rules for prototype inheritance of LambdaJS: we can include them if needed, for sure we consider them in the implementation.}
+We discuss some important points: in rule \irule{JS-PrimOp} we assume a $\delta$ function, which defines the behaviour of primitives operations. In rule \irule{JS-Ref} we ensure that running instances can only create memory cells they can access; in rule \irule{JS-Deref} and \irule{JS-SetRef} we perform the expected access control checks. For simplicity we excluded the rules for prototype inheritance of \ljs with no impact on the, but are included in the implementation. The prototype inheritance of Javascript is modeled in \ljs as a recursion on the \texttt{\_\_proto\_\_} field if an attribute is not found in the current object, and if the \texttt{\_\_proto\_\_} field does not exist is returned \texttt{undefined}.
 
 \begin{table}[p]
 \small
@@ -291,6 +303,8 @@ We discuss some important points: in rule \irule{JS-PrimOp} we assume a $\delta$
 \label{tab:lambdajs}
 \end{table}
 
+\subsection{Definitions}
+\todo {nome sezione!!}
 \begin{definition}[Exercise]
 \label{def:exercise}
 \mbox{ }
@@ -303,10 +317,11 @@ $\forall s',\vec{\alpha}$ such that $s\xRa{\vec{\alpha}}s'$, if
 $\labex{a}{\rho_a}{\rho'}\in \{\vec{\alpha}\}$ then $\rho'\sqsubseteq\rho$.
 \end{itemize}
 \end{definition}
+This means that a system \emph{exercises} $\rho$ if and only if through its execution (reduction steps) a permission $\rho$ is exercised and that a system \emph{exercises at most} $\rho$ if and only if all the permission required during all possible executions are lower than $\rho$. The second statement gives an upper bound on the permission required by the system.
 
-\noindent We say that a phrase of syntax $\phi$ is \emph{closed} iff $\fv(\phi) = \emptyset$.
+%\noindent We say that a phrase of syntax $\phi$ is \emph{closed} iff $\fv(\phi) = \emptyset$.
 
-We now introduce our threat model. We assume that the set of variables $\vars$ is partitioned into two sets $\vars_t$ (trusted variables) and $\vars_u$ (untrusted variables). We stipulate that all the variables occurring in a system we analyse are drawn from $\vars_t$, while all the variables occurring in the opponent code are drawn from $\vars_u$.\todo{important for opponent typability}
+We now introduce our threat model. We assume that the set of variables $\vars$ is partitioned into two sets $\vars_t$ (trusted variables) and $\vars_u$ (untrusted variables). We stipulate that all the variables occurring in a system we analyse are drawn from $\vars_t$, while all the variables occurring in the opponent code are drawn from $\vars_u$.
 
 \begin{definition}[Opponent]
 \label{def:opponent}
@@ -317,13 +332,15 @@ A \emph{$\rho$-opponent} is a closed pair $(h,i)$ such that:
 \item for any $x \in \fvbv(h) \cup \fvbv(i)$, we have $x \in \vars_u$.
 \end{itemize}
 \end{definition}
+So an $\rho$-opponent is a pair of handlers and instances such that for each expression in the instances or in the handlers of it, the expression \emph{exercise at most} $\rho$ and all the variable used in the expression by the opponent are untrusted since it can modify their value.
 
-Our security property is given over \emph{initial} systems, i.e., a system with no running instances, since we are interested in understanding the interplay between the exercised permissions and the message passing interface exposed by the handlers. In particular, we want to understand how many privileges the opponent can escalate by leveraging existing handlers.\todo{the security property is now given only over initial systems. the old version with arbitrary systems looked too weak.}
+Our security property is given over \emph{initial} systems, i.e., a system with no running instances, since we are interested in understanding the interplay between the exercised permissions and the message passing interface exposed by the handlers. In particular, we want to understand how many privileges the opponent can escalate by leveraging existing handlers.
 
 \begin{definition}[Safety Despite Compromise]
 \label{def:safety}
 A system $s = \sys{\mu}{h}{\emptyset}$ is \emph{$\rho$-safe despite $\rho'$} (with $\rho \not\sqsubseteq \rho'$) if and only, for any $\rho'$-opponent $(h_o,i_o)$, the system $s' = \sys{\mu}{h,h_o}{i_o}$ exercises at most $\rho$.
 \end{definition}
+In other words this crucial definition state that an \emph{initial} system is \emph{$\rho$-safe despite $\rho'$} if each $\rho'$-opponent cannot alter the system in order to access to a privilege bigger than $\rho$. This means that a system is safe if the opponent cannot access privileges that the system initially did not have. For example in the chrome extension, given a clean component that executes at most permission \texttt{tabs}, an attacker that compromise it cannot access privilege higher than \texttt{tabs}.
 
 \section{Example}
 \label{sec:Example}
@@ -339,7 +356,7 @@ b(x <| SEND: BACK).
 \end{verbatim}
 Assume that both $\rho$ and $\rho'$ are bounded above by BACK, while all the other permissions are unrelated. More sensible encodings are possible, but this is enough to present the analysis.
 
-\paragraph{Privilege escalation analysis.}
+\subsection{Privilege escalation analysis.}
 The idea is that each handler has a ``type'' which describes the permissions which are needed to access it, and the permissions which will be exercised (also transitively) by the handler. For instance, the example above is acceptable according to the following assumptions:
 \begin{verbatim}
 cs1: CS1 ---> rho join rho'
@@ -348,7 +365,7 @@ b:   SEND ---> rho join rho'
 \end{verbatim}
 These assumptions environment tells us that a caller with permission SEND can escalate up to $\rho \join \rho'$. All these aspects are formalized in the \emph{abstract stack} we introduce below and our novel notion of \emph{permission leakage}, which quantifies the attack surface of the message passing interface.
 
-\paragraph{Refining the analysis.}
+\subsection{Refining the analysis.}
 While it is perfectly sensible that an opponent with permission SEND can escalate both $\rho$ and $\rho'$, the typing above may appear too conservative if we focus, for instance, on an opponent with permission CS1. Indeed, an opponent with CS1 can access the first content script, but not directly the background page: since CS1 sends only messages of the first type, it would be safe to state that the opponent can only escalate $\rho$ rather than $\rho \join \rho'$, which is not entailed by the typing above.
 
 Our analysis is precise, though, since it keeps track also of an abstract network, which approximates the incoming messages for all the handlers. In the example above we have:
@@ -364,6 +381,8 @@ b:   SEND ---> rho
 \end{verbatim}
 which captures the correct information for a CS1-opponent (i.e., a CS1-opponent can only escalate $\rho$).
 
+\todo[inline]{commented work here! maybe remove or move to future work.}
+\begin{comment}
 \paragraph{Permission bundling analysis.}\todo{outdated example. still useful for next project.}
 Identifying dangerous permission bundling is challenging, since it depends on the structure of the exchanged messages. For instance, if both $CS1$ and $CS2$ employ the same tags, then the handler $B$ is not bundled at all and must be accepted. We associate to each handler a set of incoming messages and a set of outgoing messages, as follows:
 \begin{verbatim}
@@ -388,9 +407,13 @@ b1(x <| CS1).>> rho with B
 b2(x <| CS2).>> rho' with B
 \end{verbatim}
 Now the opponent-aware analysis shows a different surface for privilege escalation. Specifically, a caller with $CS1$ can escalate to $\rho$, while a caller with $CS2$ can escalate to $\rho'$, which is much better than before.
+\end{comment}
 
 \section{Safety properties} 
 \label{sec:SafetyProp}
+\todo[inline]{Titolo\dots}
+\section{Analysis}
+\label{sec:Analysis}
 The aim of the analysis is to statically predict which privileges
 are granted to the opponent through the message-passing interface:
 for this purpose, it is helpful to approximate also the values an
@@ -406,7 +429,7 @@ We will prove in the following that this implies that any $\rho$-opponent
 interacting with $s$ will at most escalate privileges according to an
 upper bound which we can immediately compute from $\absC$.
 
-\paragraph*{Abstract Values and Abstract Operations.} 
+\subsection{Abstract Values and Abstract Operations.} 
 Let $\absvalues$ stand for the set of the abstract values $\hat{v}$,
 defined as sets of abstract prevalues according to the following 
 productions\footnote{We occasionally omit brackets around singleton 
@@ -439,9 +462,11 @@ $\absset$ and $\absdel$, mirroring the standard get field, set field and delete
 field operations on records. All these abstract operations can be chosen arbitrarily,
 as long as they satisfy the conditions needed for the proofs. We assume that abstract
 values are ordered by a pre-order $\sqsubseteq$: we require this pre-order to satisfy
-some relatively mild conditions (see the proofs section).
+some relatively mild conditions\todo{(see the proofs section)}.
 
-\paragraph*{Judgements.}  The judgements of the analysis are specified
+In chapter \ref{chap:Implementation} we describe the actual choice of the abstract domains used in the implementation and the operations on them and how they respect properties listed in section \ref{sec:CorrectnesReqs}.
+
+\subsection{Judgements.}  The judgements of the analysis are specified
 relative to an abstract environment $\absC$. The abstract environment
 is global meaning that it is going to represent \emph{all} the
 environments that may arise during the evaluation of the system.
