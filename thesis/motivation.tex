@@ -1,7 +1,6 @@
 \section{Privilege separation}
 \label{sec:PriviSep}
 
-
 \section{Privilege escalation attacks}
 \label{sec:Escalation}
 
@@ -13,11 +12,12 @@ To mitigate this threat, as deeply discussed in \cite{ChromeExtSpec}, the extens
 
 More specifically, Google Chrome extension framework \cite{ChromeExtensionOnline} splits the extension in two sets components: content scripts and background pages. The content scripts are injected in every page on which the extension is running using the same origin; they run with no privileges except the one used to send messages to the background and they cannot exchange pointers with the page except to the standard field of the DOM. Background pages, instead, have only one instance for each extension, are totally separated from the opened pages, have the full set of privilege granted at install time and, if it is allowed from the manifest, they can inject new content scripts to pages, but they can communicate with the content scripts only via message passing.
 
-\section{Chrome extension architecture weaknesses}
-\label{sec:ExtWeakness}
+%\section{Chrome extension architecture weaknesses}
+%\label{sec:ExtWeakness}
 
 
 
-\section{Proposal}
-\label{sec:Proposal}
+\section{Proposal} 
+\label{sec:Proposal} 
+\todo[inline]{titolare meglio... tipo our work...}
 In this work do a study on Chrome Extensions identifying a possible weakness. We write a calcolus 

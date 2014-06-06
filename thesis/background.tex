@@ -1,4 +1,4 @@
-\section{Chrome extension architecture details}
+\section{Chrome extension architecture}
 \label{sec:ExtDetails}
 As showed in \cite{ChromeExtensionOnline} a Chrome Extension is an archive containing files of various kind like JavaScript, HTML, JSON, images and others that extends the browser features.
 
@@ -59,7 +59,7 @@ In table \ref{src:AManifest} we can see a manifest of a simple Chrome extension 
 \end{table}
 
 \subsection{Content scripts}
-Content scripts are Javascript source files that are automatically injected to the web page if this matches with the pattern defined in the manifest. Otherwise it can be programmatically injected by a background page using the \texttt{chrome.tabs.executeScript} call (the function require \texttt{tabs} permission). In the example of table \ref{tab:URLPatSyn} the file \texttt{myscript.js} is injected to all sub-pages of \texttt{https://moodle.dsi.unive.it/}. In the extension framework content scripts are designed to interact with pages. Since this interaction could be the entry point for an attacker, content scripts have no permissions except the one used to communicate with the extension core. In order to reduce injection of code in the content script from a malign page, there is a strong isolation between the heaps of these two. Content scripts of the same extension are run together in their own address space, and the only way they have to interact with the page on which they are injected is via the DOM API. DOM API lets the content scripts to access and modify only standard fields of the DOM object, while other changes are kept locally\cite{ChromeExtSpec}. This strong isolation mitigate the risk of code injection since it blocks almost completely pointer exchange. 
+Content scripts are Javascript source files that are automatically injected to the web page if this matches with the pattern defined in the manifest. Otherwise it can be programmatically injected by a background page using the \texttt{chrome.tabs.executeScript} call (the function require \texttt{tabs} permission). In the example of table \ref{tab:URLPatSyn} the Javascript file \texttt{myscript.js} is injected to all sub-pages of \texttt{https://moodle.dsi.unive.it/}. In the extension framework content scripts are designed to interact with pages. Since this interaction could be the entry point for an attacker, content scripts have no permissions except the one used to communicate with the extension core. In order to reduce injection of code in the content script from a malign page, there is a strong isolation between the heaps of these two. Content scripts of the same extension are run together in their own address space, and the only way they have to interact with the page on which they are injected is via the DOM API. DOM API lets the content scripts to access and modify only standard fields of the DOM object, while other changes are kept locally\cite{ChromeExtSpec}. This strong isolation mitigate the risk of code injection since it blocks almost completely pointer exchange. 
 \missingfigure{Figura dell'articolo della Felt su isolated world.}
 
 In order to keep functionality of extensions, communication between content scripts and extension core is done using a message passing interface. The message passing interface has crucial importance in this work since it is the only way for a content script to trigger execution of a privilege. We will discuss it later in \ref{subs:MPI}.
@@ -155,9 +155,10 @@ chrome.runtime.onConnect.addListener(onConnect)
 \label{tab:MPIPort}
 \end{table}
 
-\subsection{Bundling}
+\section{Bundling}
 \label{sec:Bundling} 
 \todo{scriviere molto bene questa parte}
+\todo[inline]{esempio; }
 As seen in table \ref{tab:MPIMessage} the choice taken by a component when a message is received can depend on various factors decided by the programmer.
 
 Let us explain the example in \ref{tab:Bundled}: suppose to have three components Background, CS1 and CS2. CS1 can only send messages that has \texttt{"getPasswd"} as title and CS2 only \texttt{"executeXHR"}. Here the Background deduct the sender checking the title of the messages instead of of explicitly checking the argument \texttt{sender}. According to the check decides which privilege has to be executed. This practice is called bundling and is very dangerous because an attacker can compromise just one of the two content scripts and from that one can forge messages with any form escalating a permission that it does not have in the original setting.
@@ -283,4 +284,4 @@ The principal levels of abstraction are grouped in some possible approaches: abs
 
 The modularity fits very well for analysis, because the abstract succinct style is very clean and expressive without dealing with implementation details, and from such specification is easy to commute it to a compositional verbose specification. From the latter is possible to build an algorithm for generating the set of constraints of a program and combining it with a simple constraint solver like the worklist algorithm \cite{PrincipleProgramAnalysis} or with a more sophisticated ones like the succinct solver \cite{SuccinctSolver} or the BANSHEE solver \cite{BansheeSolver}, is possible to compute the estimate for a program. \todo{quale dei due?}
 
-In this work, indeed, is used the flow logic, and as described before, the various specification-to-implementation steps are done\todo{traballante...}. In chapter \ref{chap:Formalization} is used an abstract-succinct approach, and in chapter \ref{chap:Implementation} \todo{perche' sti moltoni di refs non vanno??} the analysis is expanded in the compositional-verbose one; from this the algorithm for constraint-generation is built and finally is used a worklist algorithm to solve the constraints and to find an estimate for a program. 
+In this work, indeed, is used the flow logic, and as described before, the various specification-to-implementation steps are done\todo{traballante...}. In chapter \ref{chap:Formalization} is used an abstract-succinct approach, and in chapter \ref{chap:Implementation} the analysis is expanded in the compositional-verbose one; from this the algorithm for constraint-generation is built and finally is used a worklist algorithm to solve the constraints and to find an estimate for a program. 

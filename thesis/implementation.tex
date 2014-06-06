@@ -2,6 +2,7 @@
 \label{sec:AnalysisSpec}
 specifica dell'analisi
 
+\begin{comment}
 \subsection{Abstract succinct}
 \[
 \begin{array}{llcl}
@@ -11,7 +12,7 @@ specifica dell'analisi
 \mathit{Abstract\ permission\ cache} & \Pat & : & \labs \rightarrow \perms \\
 \end{array}
 \]
-\begin{comment}
+
 \begin{tabular}{l l l l}
 {[\textit{PV-Name}]}&\multicolumn{3}{l}{$\aenvs \modelrho n : \vat$ iff $n \in \vat$} \\
 {[\textit{PV-Var}]}&\multicolumn{3}{l}{$\aenvs \modelrho x : \vat$ iff $\Env(x) \subseteq \vat$} \\ 
@@ -104,20 +105,50 @@ specifica dell'analisi
 \end{table}
 \end{comment}
 
+
 \newcommand{\all}[0]{\alpha}
+
+%\newcommand{\Cat}[0]{\hat{C}}
+%\newcommand{\muat}[0]{\hat{\mu}}
+%\newcommand{\Env}[0]{\hat{\Gamma}}
+%\newcommand{\Pat}[0]{\hat{P}}
+%\newcommand{\modelrho}{\models_{\rho_s}}
+%\newcommand{\aenvs}{(\Env,\muat)}
+%\newcommand{\caesti}[2]{\aenvs \modelrho #1 : \vat_{#2} \gg \rho_{#2}}
+%\newcommand{\caest}[1]{\aenvs \modelrho #1 : \vat \gg \rho}
+\newcommand{\cenvs}{\absC}
+\newcommand{\Cat}[0]{\absC_{\hat{C}}}
+\newcommand{\muat}[0]{\absC_{\hat{\mu}}}
+\newcommand{\Env}[0]{\absC_{\hat{\Gamma}}}
+\newcommand{\Pat}[0]{\absC_{\hat{P}}}
+\newcommand{\Phiat}[0]{\absC_{\hat{\Phi}}}
+\newcommand{\Upsat}[0]{\absC_{\hat{\Upsilon}}}
+\newcommand{\ccest}[1]{\cenvs \models_{c \rho_s} #1}
+\newcommand{\ccestl}[1]{\cenvs \models_{c \rho_s} {(#1)}^{\alpha}}
+\newcommand{\lbt}[1]{{e_#1}^{\alpha_#1}}
+%\newcommand{\letexprs}[3]{\mathbf{let}\ \vec{#1 = #2}\ \mathbf{in}\ #3}
+
 \subsection{Compositional Verbose}
+
+\[
+\begin{array}{llcl}
+\mathit{Abstract\ cache} & \hat{C} & : & A \rightarrow \absvalues \\
+\mathit{Abstract\ variable\ environment} & \hat{\Gamma} & : & \vars \rightarrow \absvalues \\
+\mathit{Abstract\ memory} & \hat{\mu} & : & \labs \times \perms \rightarrow \absvalues \\
+\mathit{Abstract\ permission\ cache} & \hat{P} & : & \perms \rightarrow \perms \\
+\mathit{Abstract\ stack} & \abstack & : & \names \times \perms \rightarrow \perms \times \perms \\
+\mathit{Abstract\ network} & \absnet & : & \names \times \perms \rightarrow \absvalues.
+\end{array}
+\]
+
+To lighten the notation, we denote by  $\absC$ all $\hat{C}, \hat{\Gamma}, \hat{\mu}, \hat{P}, \abstack, \absnet$.
+%\newcommand{\all}[0]{\alpha}
 \begin{table}
 \begin{tabular}{l l l l}
 {[\textit{CV-Val}]}&\multicolumn{3}{l}{$ \ccestl {v} $ iff $\{\vat\} \sqsubseteq \Cat(\all)$} \\ 
-%{[\textit{CV-Var}]}&\multicolumn{3}{l}{$ \ccestl {x} $ iff $\Env(x) \sqsubseteq \Cat(\a)$} \\ 
 {[\textit{CV-Lambda}]}&\multicolumn{3}{l}{$ \ccestl {\lam{x}{\lbt 0}} $ iff}\\
 &&\multicolumn{2}{l}{$\{\lam{x}{\lbt 0}\} \sqsubseteq \Cat(\all) \wedge $}\\
 &&\multicolumn{2}{l}{$ \ccest {\lbt 0}$}\\
-%{[\textit{CV-Obj}]}&\multicolumn{3}{l}{$ \ccestl {\rec{\vec{str_i : \lbt i}}}$ iff}\\
-%&&\multicolumn{2}{l}{$\forall i:$}\\
-%&&&$\ccest {\lbt i} \wedge$\\
-%&&&$\Pat(\ell_i) \sqsubseteq \Pat(\ell) \wedge$\\ 
-%&&\multicolumn{2}{l}{$\rec{\vec{str_i : \Cat(\ell_i)}} \sqsubseteq \Cat_\ell $} \\
 {[\textit{CV-Let}]}&\multicolumn{3}{l}{$ \ccestl {\letexpr{x}{\lbt 1}{{e'}^{\all'}}}$ iff}\\
 &&\multicolumn{2}{l}{$ \ccest {{e'}^{\all'}} \wedge$} \\
 &&\multicolumn{2}{l}{$ \Pat(\all') \sqsubseteq \Pat(\all) \wedge$}\\
@@ -183,7 +214,14 @@ specifica dell'analisi
 &&\multicolumn{2}{l}{$ \ccest {\lbt 2} \wedge \Pat(\all_2) \sqsubseteq \Pat(\all) \wedge $}\\
 &&\multicolumn{2}{l}{$\Cat(\all_2) \sqsubseteq \Cat(\all) \wedge$} \\
 &&\multicolumn{2}{l}{$ \forall \ell \in \Cat(\all_1) : \Cat(\all_2) \sqsubseteq \muat(\ell, \rho_s)$} \\
-{[\textit{CV-Send}]}& \dots \\
+{[\textit{PE-Send}]}&\multicolumn{3}{l}{$\ccestl {\send {e_1} {e_2} {\rho}} $ iff}\\
+&&\multicolumn{2}{l}{$ \ccest {e1} \wedge \Pat(\all_1) \sqsubseteq \Pat(\all) \wedge$}\\
+&&\multicolumn{2}{l}{$ \ccest {e2} \wedge \Pat(\all_2) \sqsubseteq \Pat(\all) \wedge$}\\
+&&\multicolumn{2}{l}{$ \forall m \in \Cat(\all_1) : \forall \rho_m \sqsupseteq \Pat(\all):$}\\
+&&&$\Upsat(m, \rho_m) = (\rho_r, \rho_e)\wedge $\\
+&&&$\rho_r \sqsubseteq \rho_s \Rightarrow \rho_e \sqsubseteq \Pat(\all) \wedge$\\
+&&&$\Cat(\all_2) \sqsubseteq \Phiat(m, \rho_m) \wedge $\\
+&&\multicolumn{2}{l}{$\mathbf{unit} \in \Cat(\all) $}\\
 {[\textit{CV-Exercise}]}&\multicolumn{3}{l}{$\ccestl {\exercise {\rho}} $ iff}\\
 &&\multicolumn{2}{l}{$ \rho \sqsubseteq \rho_s \Rightarrow \rho \sqsubseteq \Pat(\all) \wedge $}\\
 &&\multicolumn{2}{l}{$ \mathbf{unit} \in \Cat(\all)$}\\
@@ -191,6 +229,8 @@ specifica dell'analisi
 \caption{Compositional Verbose part 2}
 \label{tab:CompVerb2}
 \end{table}
+
+
 
 \section{Constraint generation}
 \label{sec:ConstraintGen}
@@ -242,10 +282,6 @@ lambda_* & $is the set of all lambdas of the program;$\\
 {[\textit{CG-Lambda}]} & \multicolumn{3}{l}{$ \genl {\lam{x}{\lbt 0}} = $}\\
 && \multicolumn{2}{l}{$\{\{\lam{x}{\lbt 0}\} \sqsubseteq \Cel(\all)\}\cup $}\\
 && \multicolumn{2}{l}{$ \gen {\lbt 0} $} \\
-%{[\textit{CG-Obj}]} & \multicolumn{3}{l}{$ \genl {\rec{\vec{str_i : \lbt i}}} = $}\\
-%&& \multicolumn{2}{l}{$\bigcup_i (\gen {\lbt i} \cup$}\\
-%&&& $\{\Pel(\all_i) \sqsubseteq \Pel(\all)\})\cup$\\ 
-%&& \multicolumn{2}{l}{$\braces{\rec{\vec{str_i : \Cel(\all_i)}} \sqsubseteq \Cel(\all)} $} \\
 {[\textit{CG-Let}]} & \multicolumn{3}{l}{$\genl {\letexpr{x_1}{\lbt 1}{{e'}^{\all'}}} = $}\\
 && \multicolumn{2}{l}{$ \gen {\lbt 1} \cup \gen {{e'}^{\all'}} \cup$ }\\
 && \multicolumn{2}{l}{$ \{\Cel(\all_1) \sqsubseteq \Rel(x_1)\} \cup \braces{\Pel(\all_1) \sqsubseteq \Pel(\all)}) \cup $} \\
@@ -272,7 +308,6 @@ lambda_* & $is the set of all lambdas of the program;$\\
 {[\textit{CG-While}]}&\multicolumn{3}{l}{$\genl {\while {\lbt 1} {\lbt 2}} = $}\\
 &&\multicolumn{2}{l}{$ \gen {\lbt 1} \cup \gen {\lbt 2} \cup $}\\
 &&\multicolumn{2}{l}{$\braces{\Pel(\all_1) \sqsubseteq \Pel(\all)} \cup$} \\
-%&&\multicolumn{2}{l}{$\braces{\true \in \Cel(\all_1) \Rightarrow \Cel(\all_2) \sqsubseteq \Cel(\all) }\cup$}\\
 &&\multicolumn{2}{l}{$\braces{\true \in \Cel(\all_1) \Rightarrow \Pel(\all_2) \sqsubseteq \Pel(\all) }\cup$}\\
 &&\multicolumn{2}{l}{$\braces{\false \in \Cel(\all_1) \Rightarrow \widehat{\undef} \sqsubseteq \Cel(\all)}$}\\
 \end{tabular}

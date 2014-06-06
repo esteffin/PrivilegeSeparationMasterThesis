@@ -4,22 +4,25 @@ This chapter is about the formal part of the work and explain the calculus, the 
 
 \section{Calculus}
 \label{sec:Calculus}
-In this section we introduce the language used to study privilege escalation. The core of the calculus models Javascript essential features and is a subset of \ljs. \ljs is a Scheme dialect described in \cite{LambdaJS} and used to desugar Javascript in order to simplify it in few construct with easy semantic behavior. It has been used to do static analysis on Javascript code in \cite{Strobe} and \cite{LambdaJSMightVanHorn}. It admit functions, object (i.e., records) and mutable references. Here we are not using exceptions and break statements for the sake of simplicity. On the other hand, we added specific constructs to explicitly deal with privilege-based access control and privilege escalation. We rely on a channel-based communication model based on asynchronous message exchanges and handlers. Send expression and its corresponding handler are similar to the ones used in \cite{Lintent}. \todo{modificato un po'}
+In this section we introduce the language used to study privilege escalation. The core of the calculus models Javascript essential features and is a subset of \ljs. \ljs is a Scheme dialect described in \cite{LambdaJS} and used to desugar Javascript in order to simplify it in few construct with easy semantic behavior. It has been used to do static analysis on Javascript code in \cite{Strobe} and \cite{LambdaJSMightVanHorn}. It admit functions, object (i.e., records) and mutable references. Here we are not using exceptions and break statements for the sake of simplicity. On the other hand, we added specific constructs to explicitly deal with privilege-based access control and privilege escalation. We rely on a channel-based communication model based on asynchronous message exchanges and handlers. Send expression and its corresponding handler are similar to the ones used in \cite{Lintent}. 
+
+The desugaring function has an interesting feature since it translates Javascript, that is not lexically scoped, to \ljs that is lexically scoped. This simplifies the analysis because remove the complexity to deal with a scoping different to the statical one. In \cite{LambdaJS} is shown how the desugaring function transform correctly these two different scoping approaches.
 
 \subsection{Syntax}
 Now we introduce the syntax of our calculus starting from values, expressions, memories, handlers, instances and systems. We then have a example to show how it works.
 
 We assume denumerable sets of names $\names$ (ranged over by $a,b,m,n$) and variables $\vars$ (ranged over by $x,y,z$). We let $c$ range over constants, including numbers, strings, boolean values, unit and the ``undefined'' value; we also let $r$ range over references in $\refs$, i.e., memory locations. The calculus is parametric with respect to an arbitrary lattice of permissions $(\perms,\sqsubseteq)$ and we let $\rho$ range over $\perms$. Finally, we assume a denumerable set of labels $\labs$ (ranged over by $\ell$) to support our static analysis. All the sets above are assumed pairwise disjoint.
 
-\todo[inline]{ref lintent bound and free}
+Variables can be either bound or free. Expressions  $\lambda$, ``let'' the handler $\handler{a}{x}{\rho}{e}{\rho'}$ are binding operators for variables: the notions of free variables fv arise as expected. In other words the three construct over, bind a value to a variable and in the expression that follows the bind the variable lookup gives the value of its in the bind. \todo{stabile?}
 
 \subsubsection{Values.}
+Let us now introduce the possible native value that are found in the calculus.
 We let $u,v$ range over \emph{values}, defined by the following productions:
 \begin{align*}
 c & ::= \mathit{num} ~|~ \mathit{str} ~|~ \mathit{bool} ~|~ \unit ~|~ \undef, \\
 u,v &::= n ~|~ x ~|~ c ~|~ r_{\ell} ~|~ \lam{x}{e} ~|~ \rec{\vec{str_i:v_i}}.
 \end{align*}
-All the forms above are standard. Notice that references bear a label $\ell$, identifying the program point where they are created (see below). This is just needed for our static analysis and plays no role in the semantics. For simplicity, we consider only \emph{closed} record values, i.e., without free variables. Fortunately this does not involve any loss of expressiveness.
+A value could be either a name, a variable, a constant, a reference, a lambda or a record. A constant is either number, a string, boolean, unit (that means nothing) or undefined. Undefined is a Javascript special value returned from an invalid lookup on an object field. Records are maps from string to a value and we consider them \emph{closed}, without loss of expressiveness. This means that all lambdas in a record are closed, i.e., without free variables. Notice that references contains a label $\ell$. This is needed in our static analysis, but has no role in the semantics.
 
 \begin{definition}[Serializable Value]
 \label{def:serializable}
@@ -32,6 +35,7 @@ A value $v$ is \emph{serializable} if and only if:
 This means that a serializable value are only names, constants references and record containing only serializable values. Functions and variables cannot be serialized. This fits the model of Chrome extension message passing interface described in \ref{subs:MPI} because it let only to send JSON-serialized objects, or strings.
 
 \subsubsection{Expressions.} 
+Now we introduce the expressions of the calculus. Since the calculus is functional there are no statements, but just expressions.
 We let $e$ range over \emph{expressions}, defined by the following productions:
 \[
 \begin{array}{lcl}
@@ -40,14 +44,11 @@ e,f & ::= & v ~|~ \letexpr{x}{e}{e} ~|~ \appl{e}{e} ~|~ \op(\vec{e_i}) ~|~ \cond
 & | & \exercise{\rho}.
 \end{array}
 \]
-The operations $\op(\vec{e_i})$ include arithmetic operations, boolean
-operations and string operations including string equality, denoted by
-$==$. The creation of new references comes with an annotation:
+The operations $\op(\vec{e_i})$ is used for all arithmetic, boolean and string operations. It includes even string equality, denoted by $==$. The creation of new references comes with an annotation:
 $\newref{\ell}{e}$ creates a fresh reference $r_\ell$ labelled by $\ell$.
-We observe that $\ell$ plays no role in the semantics: annotating the reference
-with the program point where it has been created will be useful for our
-static analysis (actually to deal with reference creation within
-loops).
+As said before, $\ell$ plays no role in the semantics: annotating the reference
+with the program point where it has been created is useful for our
+static analysis.
 
 We discuss the non-standard expressions. The expression
 $\send{a}{v}{\rho}$ sends the value $v$ on channel $a$: the value can
@@ -57,7 +58,7 @@ message). The expression $\exercise{\rho}$ exercises the permission
 $\rho$. Indeed, in order to keep simple the calculus and to more
 clearly state our security property, we abstract any
 security sensitive expression (such as the call of a function library)
-with the generic exercise of the correspondent privilege. So, since the execution of a privilege is only used in API calls, the $\exercise{\rho}$ expression is placed in such libraries just for marking such permission execution.
+with the generic exercise of the correspondent privilege. So, since the execution of a privilege is only used in API calls, the $\exercise{\rho}$ expression is placed in such libraries just for marking the permission execution.
 
 \subsubsection{Memories.}
 We let $\mu$ range over \emph{memories}, defined by the following productions:
@@ -71,19 +72,21 @@ We let $h$ range over multisets of \emph{handlers}, defined by the following pro
 \[
 h ::= \emptyset ~|~ h,\handler{a}{x}{\rho}{e}{\rho'}.
 \]
-The handler $\handler{a}{x}{\rho}{e}{\rho'}$ is an expression $e$, which is granted permission $\rho'$. The handler is guarded by a channel $a$, which requires permission $\rho$ for write access: this allows the receiver to be protected against untrusted senders. When a message is sent over $a$, the expression $e$ will be disclosed and a new \emph{instance} of the handler is created.
+The handler $\handler{a}{x}{\rho}{e}{\rho'}$ contains an expression $e$, which is granted permission $\rho'$. The handler is guarded by a channel $a$, which requires permission $\rho$ for write access: this protect the receiver against untrusted senders. When a message is sent over $a$, the handler is triggered and the expression $e$ will be disclosed and a new \emph{instance} with $e$ is created.
 
-In other world when a $\send{a}{v}{\rho_s}$ is executed all handler $\handler{a}{x}{\rho}{e}{\rho'}$ on channel $a$ with permission $\rho \sqsubseteq \rho_s$ are triggered. Triggering a handler means that the message $v$ is bound to $x$ in the environment of $e$ and $e$ is executed in a new \emph{instance}.
+In other world when a $\send{a}{v}{\rho_s}$ is executed on a channel $a$ all handler $\handler{a}{x}{\rho}{e}{\rho'}$ on the same channel $a$ with permission $\rho \sqsubseteq \rho_s$ are triggered. Triggering a handler means that the message value $v$ is bound to variable $x$ in the environment of $e$ and $e$ is executed in a new \emph{instance}.
 
 \subsubsection{Instances.} 
-We let $i$ range over pools of running \emph{instances}, i.e., the active part of a system which is spawned when a message is received by an handler. An instance is a running expression, which is granted a set of permissions. Instances are multisets defined as follows:
+Instances are the active part of a system. They are spawned when a message is received by a handler and the function in it is executed. Instances contains a permission $\rho$ that is the same granted to the handler that has spawned it.
+We let $i$ range over pools of running \emph{instances}.%, i.e., the active part of a system which is spawned when a message is received by an handler. An instance is a running expression, which is granted a set of permissions. 
+Instances are multisets defined as follows:
 \[
 i,j ::= \emptyset ~|~ i,\inst{a}{e}{\rho}
 \]
 Instances are annotated with the channel name corresponding to the handler which spawned them: this is convenient for our static analysis, but it is not important for the semantics.
 
 \subsubsection{Systems.} 
-A \emph{system} is defined as a triple $s = \sys{\mu}{h}{i}$. It is the representation of a running extension in a certain moment. Its components are the memory $\mu$ that contains all the data referenced in the program, all the handler registered in it and all the running instances: listeners that have been triggered and that have not yet finished their execution.
+A \emph{system} is defined as a triple $s = \sys{\mu}{h}{i}$. It is the representation of a running extension in a certain moment. Its components are the memory $\mu$ that contains all the data referenced in the program, all the handler registered in it and all the running instances: listeners that have been triggered and that have not yet finished their execution. An initial state is a state where there are no instances $s_{initial} = \sys{\mu}{h}{\emptyset}$.
 
 
 \subsubsection{Example.}
@@ -96,7 +99,7 @@ A \rightarrow B: \rec{tag: "okay", other: z}
 \end{array}
 \]
 Here the component A sends to B a message containing $\rec{tag: "init", val: x}$. Then B reply to A with $y$ and finally A respond to B with $\rec{tag: "okay", other: z}$
-In Chrome, and in \ljs, the handler of the component $B$ is programmed more or less as in table \ref{tab:OnMessageCalc}. \todo{OK?}
+In Chrome, and in \ljs, the handler of the component $B$ is programmed more or less as in table \ref{tab:OnMessageCalc}.
 
 \begin{table}[tlb]
 \begin{small}
@@ -113,7 +116,8 @@ void onMessage (Message m) {
         process_other (m.other) >> rho';
     else
         do nothing;
-}
+};
+chrome.runtime.onMessage.addListener(onMessage);
 \end{lstlisting}\\
 \hline
 \hline
@@ -143,13 +147,13 @@ a(x <| SEND: BACK).
 \end{table}
 
 
-\section{Semantics}
+\subsection{Semantics}
 In this section we introduce the semantic of our calculus.
-The small-step operational semantics is defined in terms of a labelled
-reduction relation between systems, i.e., $s \xra{\alpha} s'$, and an
+The small-step operational semantics is defined as a labelled
+reduction relation between systems, i.e., $s \xra{\alpha} s'$. The
 auxiliary reduction relation between expressions that is directly inherited
-from $\lambda_{JS}$ \cite{LambdaJS}, i.e.,  $\mu;e \hra_\rho \mu';e'$. We associate
-labels to reduction steps just to easily state our security property and 
+from $\lambda_{JS}$ semantic \cite{LambdaJS}, i.e.,  $\mu;e \hra_\rho \mu';e'$. We associate
+labels to reduction steps just to state our security property easily and 
 to provide additional informations in the proofs, however labels have no 
 impact on the semantics.
 
@@ -220,7 +224,7 @@ name. Hence, there might be two references with the same label but
 different names, but no pair of references with the same name and two
 different labels.
 
-We discuss some important points: in rule \irule{JS-PrimOp} we assume a $\delta$ function, which defines the behaviour of primitives operations. In rule \irule{JS-Ref} we ensure that running instances can only create memory cells they can access; in rule \irule{JS-Deref} and \irule{JS-SetRef} we perform the expected access control checks. For simplicity we excluded the rules for prototype inheritance of \ljs with no impact on the, but are included in the implementation. The prototype inheritance of Javascript is modeled in \ljs as a recursion on the \texttt{\_\_proto\_\_} field if an attribute is not found in the current object, and if the \texttt{\_\_proto\_\_} field does not exist is returned \texttt{undefined}.
+We discuss some important points: in rule \irule{JS-PrimOp} we assume a $\delta$ function, which defines the behaviour of primitives operations. In rule \irule{JS-Ref} we ensure that running instances can only create memory cells they can access; in rule \irule{JS-Deref} and \irule{JS-SetRef} we perform the expected access control checks. For simplicity we excluded the rules for prototype inheritance of \ljs with no impact on the, but are included in the implementation. The prototype inheritance of Javascript is modeled in \ljs as a recursion on the \texttt{\_\_proto\_\_} field if an attribute is not found in the current object, and if the \texttt{\_\_proto\_\_} field does not exist is returned the value \texttt{undefined}.
 
 \begin{table}[p]
 \small
@@ -305,8 +309,9 @@ We discuss some important points: in rule \irule{JS-PrimOp} we assume a $\delta$
 \label{tab:lambdajs}
 \end{table}
 
-\subsection{Safety despite compromise}
-\todo {nome sezione!!}
+\section{Safety despite compromise}
+\label{sec:SafDespComp}
+\todo [inline] {nome sezione!!}
 \begin{definition}[Exercise]
 \label{def:exercise}
 \mbox{ }
@@ -321,9 +326,7 @@ $\labex{a}{\rho_a}{\rho'}\in \{\vec{\alpha}\}$ then $\rho'\sqsubseteq\rho$.
 \end{definition}
 This means that a system \emph{exercises} $\rho$ if and only if through its execution (reduction steps) a permission $\rho$ is exercised and that a system \emph{exercises at most} $\rho$ if and only if all the permission required during all possible executions are lower than $\rho$. The second statement gives an upper bound on the permission required by the system.
 
-%\noindent We say that a phrase of syntax $\phi$ is \emph{closed} iff $\fv(\phi) = \emptyset$.
-
-We now introduce our threat model. We assume that the set of variables $\vars$ is partitioned into two sets $\vars_t$ (trusted variables) and $\vars_u$ (untrusted variables). We stipulate that all the variables occurring in a system we analyse are drawn from $\vars_t$, while all the variables occurring in the opponent code are drawn from $\vars_u$.
+We now introduce our threat model. We partition the set of variables $\vars$ into two sets $\vars_t$ (trusted variables) and $\vars_u$ (untrusted variables). We say that all the variables occurring in a system we analyse are drawn from $\vars_t$, while all the variables occurring in the opponent code are drawn from $\vars_u$.
 
 \begin{definition}[Opponent]
 \label{def:opponent}
@@ -348,7 +351,7 @@ In other words this crucial definition state that an \emph{initial} system is \e
 \label{sec:Example}
 Consider an extension made of two content scripts $CS1,CS2$ and a background page $B$. Assume that $CS1$ sends only messages with tag \texttt{Message1} and $CS2$ sends only messages with tag \texttt{Message2}.
 
-A simple formal encoding of the Google Chrome extension is the following:
+A simple encoding of the Google Chrome extension in our calculus is the following:
 \begin{verbatim}
 cs1(x <| CS1: SEND).send(b,{tag: "Message1"} |> BACK)
 cs2(x <| CS2: SEND).send(b,{tag: "Message2"} |> BACK)
@@ -381,7 +384,7 @@ where TOP signifies that $cs1$ can be accessed by the opponent (hence any value 
 cs1: CS1 ---> rho
 b:   SEND ---> rho
 \end{verbatim}
-which captures the correct information for a CS1-opponent (i.e., a CS1-opponent can only escalate $\rho$).
+which captures the correct information for a CS1-opponent (i.e., a CS1-opponent can only escalate $\rho$). \todo {lasciato uguale...}
 
 \todo[inline]{commented work here! maybe remove or move to future work.}
 \begin{comment}
@@ -411,18 +414,10 @@ b2(x <| CS2).>> rho' with B
 Now the opponent-aware analysis shows a different surface for privilege escalation. Specifically, a caller with $CS1$ can escalate to $\rho$, while a caller with $CS2$ can escalate to $\rho'$, which is much better than before.
 \end{comment}
 
-\section{Safety properties} 
-\label{sec:SafetyProp}
-\todo[inline]{Titolo\dots}
 \section{Analysis}
 \label{sec:Analysis}
-The aim of the analysis is to statically predict which privileges
-are granted to the opponent through the message-passing interface:
-for this purpose, it is helpful to approximate also the values an
-expression may evaluate to. The analysis works with abstract
-representations of the concrete values. The flow logic specification
-then consists of a set of clauses defining a judgement expressing
-acceptability of an analysis estimate for a given program fragment.
+In the analysis we predict statically which privileges an opponent can escalate through the message passing interface. To do this, as in abstract analysis, we approximate values an expression may evaluate to using abstract representation of concrete values.
+The abstract-succinct style flow logic specification that follows consists of a set of clauses defining a judgement expressing acceptability of an analysis estimate for a given program fragment.
 
 In this section, the main judgement for the flow analysis of systems
 will be $\absC\Vdash s \despite{\rho}$, meaning that $\absC$ represents
@@ -432,6 +427,11 @@ interacting with $s$ will at most escalate privileges according to an
 upper bound which we can immediately compute from $\absC$.
 
 \subsection{Abstract Values and Abstract Operations.} 
+Here we show the abstract values semantic, but we do not fix any specific representation leaving in the implementation the decision of the domains. Later we will state some properties required by abstract domains in order to prove soundness. Moreover we assume that abstract values are ordered by a pre-order $\sqsubseteq$.
+
+In chapter \ref{chap:Implementation} we describe the actual choice of the abstract domains used in the implementation and the operations on them and how they respect properties listed in section \ref{sec:CorrectnesReqs}.
+
+
 Let $\absvalues$ stand for the set of the abstract values $\hat{v}$,
 defined as sets of abstract prevalues according to the following 
 productions\footnote{We occasionally omit brackets around singleton 
@@ -455,18 +455,14 @@ $\absfuns = \{\lambda x ~|~ x \in \vars\}$.
 
 The abstract value $\absrec{\vec{str_i: v_i}}_{\absC,\rho}$ is the abstract representation
 of the concrete record $\rec{\vec{str_i: v_i}}$ in the environment $\absC$, assuming
-permissions $\rho$. Similarly to constants, we do not fix any apriori abstract representation
+permissions $\rho$. As said before, we do not fix any apriori abstract representation
 for records, i.e., both field-sensitive and field-insensitive analyses are fine.
 
 We associate to each concrete operation $\op$ an abstract counterpart $\absop$
 operating on abstract values. We also assume three abstract operations $\absget$,
 $\absset$ and $\absdel$, mirroring the standard get field, set field and delete
-field operations on records. All these abstract operations can be chosen arbitrarily,
-as long as they satisfy the conditions needed for the proofs. We assume that abstract
-values are ordered by a pre-order $\sqsubseteq$: we require this pre-order to satisfy
-some relatively mild conditions\todo{(see the proofs section)}.
-
-In chapter \ref{chap:Implementation} we describe the actual choice of the abstract domains used in the implementation and the operations on them and how they respect properties listed in section \ref{sec:CorrectnesReqs}.
+field operations on records. These abstract operations can be chosen arbitrarily,
+but they have to satisfy the conditions needed for the proofs. 
 
 \subsection{Judgements.}  The judgements of the analysis are specified
 relative to an abstract environment $\absC$. The abstract environment
@@ -482,25 +478,24 @@ abstract environment is a four-tuple made of the following components:
 \mathit{Abstract\ network} & \absnet & : & \names \times \perms \rightarrow \absvalues.
 \end{array}
 \]
-Abstract variable environments are standard: they associate abstract values to
+The abstract variable environment is standard: it associate abstract values to
 variables and to abstract functions. 
-Abstract memories are also somewhat standard: they associate abstract
+Abstract memory is also standard: if associate abstract
 values to labels denoting references, but they also keep track of some permission
 information to make the analysis more precise. Specifically, 
 if $\absmem(\ell,\rho) = \hat{v}$, then all the references
-labelled with $\ell$ contain the abstract value $\hat{v}$, provided that they
-are protected with permission $\rho$.
+labelled with $\ell$ contain the abstract value $\hat{v}$, and are protected with permission $\rho$.
 
-Abstract stacks are novel and are used to keep track of the
-permissions required to access a given handler and the permissions
-which are exercised (also transitively, i.e., via a call stack) by the
-handler itself. Specifically, if we have $\abstack(a,\rho_a) =
+Abstract stack is used to keep track of the permissions required to 
+access a given handler and the permissions which are exercised 
+(also transitively, i.e., via a call stack) by the handler itself. 
+Specifically, if we have $\abstack(a,\rho_a) =
 (\rho_s,\rho_e)$, then the handler $a$ with permission $\rho_a$ can be
 accessed by any component with permission $\rho_s$ and it will be
 able to escalate privileges up to $\rho_e$, even by calling other handlers 
 in the system.
 
-Also abstract networks are novel and are used to keep track of the
+Also abstract network is novel and it is used to keep track of the
 messages exchanged between handlers. For instance, if we have
 $\absnet(a,\rho_a) = \hat{v}$, then $\hat{v}$ is a sound abstraction
 of any message received by the handler $a$ with permission $\rho_a$. 
@@ -542,7 +537,7 @@ environment $\absC$.
 \end{table}
 
 %\paragraph*{Judgements.} 
-The judgements of the flow analysis have one of the following form:
+The judgements have one of the following form:
 \begin{itemize}
 \item $\absC \Vdash_\rho v \rightsquigarrow \hat{v}$\\
 meaning that, assuming permission $\rho$, the concrete value $v$ is
@@ -773,17 +768,19 @@ Let $s = \mu;h;\emptyset$. If $\absC \Vdash s \despite \rho$, then $s$ is $\rho'
 
 \section{Requirements for correctness}
 \label{sec:CorrectnesReqs}
-\todo{condizioni necessarie per correttezza}
-\todo{inizio parte 2 draft}
+In this part we state the requirement that the abstract domains must satisfy in order to keep the analysis sound.
+
 \begin{assumption}[Abstracting Finite Domains]
 \label{asm:finite}
 $\forall c \in \{\true,\false,\unit,\undef\}: \hat{c} = c$.
 \end{assumption}
+This means that an element of a finite domain has the abstraction that coincide with itself. For example $\true \rightsquigarrow \true$ or $\undef \rightsquigarrow \undef$.
 
 \begin{assumption}[Soundness of Abstract Operations]
 \label{asm:sound-abs-op}
 $\forall \op: \forall \vec{c_i}: \forall c: \delta(\op,\vec{c_i}) = c \Rightarrow \{\hat{c}\} \sqsubseteq \absop(\vec{{\hat{c}_i}})$.
 \end{assumption}
+In words, we say that each concrete operation $\op$ has its counterpart that is less precise since the abstraction of the result of the concrete operation is contained ($\sqsubseteq$) in the result of the abstract operation on the abstracted arguments.
 
 \begin{assumption}[Soundness of Abstract Record Operations]
 \label{asm:sound-abs-records}
@@ -794,6 +791,7 @@ All the following properties hold true:
 \item $\delete{\rec{\vec{str_i:v_i}}}{str} \hra v \wedge \absdel(\absrec{\vec{str_i:v_i}}_{\absC,\rho},\widehat{str}) = \hat{v}' \Rightarrow \exists \hat{v} \sqsubseteq \hat{v}': \absC \Vdash_{\rho} v \rightsquigarrow \hat{v}$.
 \end{enumerate}
 \end{assumption}
+As in the case of the abstract operation in \ref{asm:sound-abs-op}, the result of the concrete record operations must be abstracted to at least one value must that is contained ($\subseteq$) in the result of counterpart operation on the abstracted arguments. We say ``must be abstracted to at least one value that'' because a concrete record can be abstracted to many different representation (e.g., $\{\}\rightsquigarrow \{\}$, even $\{\} \rightsquigarrow \top$, but not $\{"a":5\} \not\rightsquigarrow \{\}$) and here we say that at least one of them must be contained in the result.
 
 \begin{assumption}[Monotonicity of Abstract Operations]
 \label{asm:mono-abs}
@@ -802,11 +800,13 @@ The following property holds true:
 \forall \absop^* \in \{\absop,\absget,\absset,\absdel\}: \forall \vec{\hat{v}_i}: \forall \vec{\hat{v}_i'}: (\forall i: \hat{v}_i \sqsubseteq \hat{v}_i' \Rightarrow \absop^*(\vec{\hat{v}_i}) \sqsubseteq \absop^*(\vec{\hat{v}_i'})).
 \]
 \end{assumption}
+We say that the same abstract operation on two different arguments with a partial-order relation between them, must preserve the partial-order on the respective results.
 
 \begin{assumption}[Totality of Abstract Operations]
 \label{asm:totality-abs}
 $\forall \absop^* \in \{\absop,\absget,\absset,\absdel\}: \forall \vec{\hat{v}_i}: \exists \hat{v}: \absop^*(\vec{\hat{v}_i}) = \hat{v}$.
 \end{assumption}
+All abstract operation are closed in the abstract domain. Means that each operation is always applicable on abstract arguments, no matter which these are, and the result is an abstract value too. So even operation that with some concrete values fails in the abstract domain never fails; in the worst case the result is $\bot$
 
 \begin{assumption}[Ordering Abstract Values]
 \label{asm:ordering}
@@ -820,11 +820,21 @@ The relation $\sqsubseteq$ over $\hat{V} \times \hat{V}$ is a pre-order such tha
 \item $\forall c \in \{\true,\false,\unit,\undef\}: \forall \hat{v}: \{\hat{c}\} \sqsubseteq \hat{v} \Rightarrow \hat{c} \in \hat{v}$.
 \end{enumerate}
 \end{assumption}
+Here is stated an ordering on abstract values:
+\begin{enumerate}
+\item the subset inclusion $\subseteq$ between two abstract values always implies an ordering $\sqsubseteq$ on them. So if an abstract value is contained in another then its representation is more precise than the second one (e.g., $\true\in \vat \wedge \true\in\vat' \wedge \undef\in\vat' \Rightarrow \vat \sqsubseteq \vat'$);
+\item if an abstract value is contained in the empty set it must be the empty set.
+\item if the singleton $\{n\}$ is contained in an abstract value then $n$ is contained in the set represented by it;
+\item the same as (3), but with labels;
+\item the singleton $\{\abslam{x}{\rho}\}$ is contained in a value if exists a permission $\rho'$ bigger than $\rho$ (i.e., $\rho \sqsubseteq \rho'$) such that the lambda using $\rho'$ is contained in the set represented by the abstract value;
+\item the same as (3), but with finite domains;
+\end{enumerate}
 
 \begin{assumption}[Abstracting Serializable Records]
 \label{asm:serializable-rec}
 If $\rec{\vec{str_i:v_i}}$ is serializable, then for any $\absC$, $\rho_a$ and $\rho_b$ we have $\absrec{\vec{str_i:v_i}}_{\absC,\rho_a} = \absrec{\vec{str_i:v_i}}_{\absC,\rho_b}$.
 \end{assumption}
+In other words, if a record is serializable then its abstract representation do not depend by the permission and cache with whom it is abstracted. This holds because any serializable record does not contains any lambda, but only elements that do not holds permissions.
 
 \begin{assumption}[Variables]
 \label{asm:variables}
@@ -837,3 +847,4 @@ All the following properties hold true:
 \item $\forall \hat{v}_1,\hat{v}_2: \fvbv(\absdel(\hat{v}_1,\hat{v}_2)) \subseteq \fvbv(\hat{v}_1)$.
 \end{enumerate}
 \end{assumption}
+This last assumption states that no abstract constants contains variables (1), that every abstract operation return a value that is not a lambda neither an object, and so do not contains any variable (2), that, since a record can contains lambdas (the only possible value where a variable can occur), all abstract record operations do not add any variable to the result that is not contained in the arguments. More specifically the abstract get return a value with variables contained in the initial record (3), abstract set do not add variable that are not in the original record or in the setted value (4), and the abstract delete do not add to the result variables that are not in the original record (5).
