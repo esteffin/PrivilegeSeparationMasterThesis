@@ -214,9 +214,9 @@ To lighten the notation, we denote by  $\absC$ all $\hat{C}, \hat{\Gamma}, \hat{
 &&\multicolumn{2}{l}{$ \ccest {\lbt 2} \wedge \Pat(\all_2) \sqsubseteq \Pat(\all) \wedge $}\\
 &&\multicolumn{2}{l}{$\Cat(\all_2) \sqsubseteq \Cat(\all) \wedge$} \\
 &&\multicolumn{2}{l}{$ \forall \ell \in \Cat(\all_1) : \Cat(\all_2) \sqsubseteq \muat(\ell, \rho_s)$} \\
-{[\textit{PE-Send}]}&\multicolumn{3}{l}{$\ccestl {\send {e_1} {e_2} {\rho}} $ iff}\\
-&&\multicolumn{2}{l}{$ \ccest {e1} \wedge \Pat(\all_1) \sqsubseteq \Pat(\all) \wedge$}\\
-&&\multicolumn{2}{l}{$ \ccest {e2} \wedge \Pat(\all_2) \sqsubseteq \Pat(\all) \wedge$}\\
+{[\textit{CV-Send}]}&\multicolumn{3}{l}{$\ccestl {\send {e_1} {e_2} {\rho}} $ iff}\\
+&&\multicolumn{2}{l}{$ \ccest {e_1} \wedge \Pat(\all_1) \sqsubseteq \Pat(\all) \wedge$}\\
+&&\multicolumn{2}{l}{$ \ccest {e_2} \wedge \Pat(\all_2) \sqsubseteq \Pat(\all) \wedge$}\\
 &&\multicolumn{2}{l}{$ \forall m \in \Cat(\all_1) : \forall \rho_m \sqsupseteq \Pat(\all):$}\\
 &&&$\Upsat(m, \rho_m) = (\rho_r, \rho_e)\wedge $\\
 &&&$\rho_r \sqsubseteq \rho_s \Rightarrow \rho_e \sqsubseteq \Pat(\all) \wedge$\\
@@ -241,30 +241,35 @@ To lighten the notation, we denote by  $\absC$ all $\hat{C}, \hat{\Gamma}, \hat{
 \newcommand{\Pel}{\mathsf{P}}
 \newcommand{\Mel}{\mathsf{M}}
 \newcommand{\El}{\mathsf{E}}
+\newcommand{\Upsel}{\mathsf{\Upsilon}}
+\newcommand{\Phiel}{\mathsf{\Phi}}
 \newcommand{\braces}[1]{\{ #1 \} }
 \newcommand{\parens}[1]{\( #1 \) }
 
 Constraint elements: $\El$.
 \[
 \begin{array}{llcl}
-\mathit{Cache\ element} & \Cel(\ell)& : & \labs \rightarrow \absvalues \\
-\mathit{Var\ element} & \Rel(x) & : & \vars \rightarrow \absvalues \\
-\mathit{State\ element} & \Mel(\perms, ref) & : & \labs \times \perms \rightarrow \absvalues \\
+\mathit{Cache\ element}      & \Cel   & : & A \rightarrow \absvalues \\
+\mathit{Permission\ Element} & \Pel   & : & A \rightarrow \perms\\
+\mathit{Var\ element}        & \Rel   & : & \vars \rightarrow \absvalues \\
+\mathit{State\ element}      & \Mel   & : & \labs \times \perms \rightarrow \absvalues \\
+\mathit{Stack\ element}      & \Upsel & : & \names \times \perms \rightarrow \perms \times \perms \\
+\mathit{Network\ element}    & \Phiel & : & \names \times \perms \rightarrow \absvalues.
 \end{array}
 \]
 
-Permission Element: $\Pel(\ell) : \labs \rightarrow \perms $
-
-
+Let c 
 Constraint form.
 \[
 \begin{array}{lrcl}
 \mathit{Term\ inclusion} & \{\vat\} & \sqsubseteq & \El \\
 \mathit{Element\ inclusion} & \El & \sqsubseteq & \El \\
-\mathit{Permission\ inclusion} & \Pel(\ell) & \sqsubseteq & \Pel(\ell') \\
+%\mathit{Permission\ inclusion} & \Pel(\ell) & \sqsubseteq & \Pel(\ell') \\
 \mathit{Operation} & \widehat{Op}(\vec{\El_i}) & \sqsubseteq & \El \\
+\mathit{Implication} & Constraint & \Rightarrow & \El \sqsubseteq \El \\
+
 \mathit{Implication} & \{\vat\} \sqsubseteq \El & \Rightarrow & \El \sqsubseteq \El \\
-%\mathit{Memory\ implication} & (\{r\} \sqsubseteq \El \wedge \rho_r \sqsubseteq \rho_s) & \Rightarrow & \El \sqsubseteq \El\\
+
 \end{array}
 \]
 Misc:
@@ -342,7 +347,16 @@ lambda_* & $is the set of all lambdas of the program;$\\
 &&\multicolumn{2}{l}{$\{\ell \in \Cel(\all_1) \Rightarrow \Cel(\all_2) \sqsubseteq \Mel(\ell, \rho_s)$}\\
 &&&$|\ \ell \in Ref_*\}\cup$ \\
 &&\multicolumn{2}{l}{$\braces{\Cel(\all_2) \sqsubseteq \Cel(\all)}$} \\
-{[\textit{CG-Send}]}& \dots \\
+{[\textit{CG-Send}]}&\multicolumn{3}{l}{$\genl {\send {e_1} {e_2} {\rho}} = $}\\
+&&\multicolumn{2}{l}{$ \gen {\lbt 1} \cup \gen {\lbt 2} \cup$}\\
+&&\multicolumn{2}{l}{$ \braces{\Pel(\all_1) \sqsubseteq \Pel(\all)} \cup \braces{\Pel(\all_2) \sqsubseteq \Pel(\all)} \cup$}\\
+&&\multicolumn{2}{l}{$\braces{\{\mathbf{unit}\} \sqsubseteq \Cel(\all)} \cup$}\\
+&&\multicolumn{2}{l}{$ \{ \{m\} \in \Cel(\all_1) \Rightarrow \Pel(\all) \sqsubseteq \rho_m \Rightarrow \Upsel(m, \rho_m) = (\rho_r, \rho_e)$}\\
+&&&$| \forall m \in Names_*, \forall \rho_m NamePerms_*\}\cup$\\
+&&\multicolumn{2}{l}{$ \{ \{m\} \in \Cel(\all_1) \Rightarrow \Pel(\all) \sqsubseteq \rho_m \Rightarrow \rho_r \sqsubseteq \rho_s \Rightarrow \rho_e \sqsubseteq \Pel(\all)$}\\
+&&&$| \forall m \in Names_*, \forall \rho_m NamePerms_*\}\cup$\\
+&&\multicolumn{2}{l}{$ \{ \{m\} \in \Cel(\all_1) \Rightarrow \Pel(\all) \sqsubseteq \rho_m \Rightarrow \rho_r \sqsubseteq \rho_s \Rightarrow \Cel(\all_2) \sqsubseteq \Phiel(m, \rho_m)$}\\
+&&&$| \forall m \in Names_*, \forall \rho_m NamePerms_*\}$\\
 {[\textit{CG-Exercise}]}& \multicolumn{3}{l}{$\genl {\exercise {\rho}} $}\\
 &&\multicolumn{2}{l}{$ \braces {\rho \sqsubseteq \rho_s \Rightarrow \rho \sqsubseteq \Pel(\all)} \cup $}\\
 &&\multicolumn{2}{l}{$ \mathbf{unit} \in \Cel(\all)$}\\

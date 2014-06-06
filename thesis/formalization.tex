@@ -1,28 +1,27 @@
 \newcommand{\ljs}{$\lambda_{JS}$}
-This chapter is about the formal part of the work and explain the calculus, the safety property, the analysis specification, theorem and requirements for correctness. It is part of the work done together with Stefano Calzavara.
+This chapter is about the formal part of the work and explains the calculus, the safety property, the analysis specification, theorem and requirements for correctness. It is part of the work done together with Stefano Calzavara.
 %calcolo e proprieta' di sicurezza by Stefano
 
 \section{Calculus}
 \label{sec:Calculus}
-In this section we introduce the language used to study privilege escalation. The core of the calculus models Javascript essential features and is a subset of \ljs. \ljs is a Scheme dialect described in \cite{LambdaJS} and used to desugar Javascript in order to simplify it in few construct with easy semantic behavior. It has been used to do static analysis on Javascript code in \cite{Strobe} and \cite{LambdaJSMightVanHorn}. It admit functions, object (i.e., records) and mutable references. Here we are not using exceptions and break statements for the sake of simplicity. On the other hand, we added specific constructs to explicitly deal with privilege-based access control and privilege escalation. We rely on a channel-based communication model based on asynchronous message exchanges and handlers. Send expression and its corresponding handler are similar to the ones used in \cite{Lintent}. 
+In this section we introduce the language used to study privilege escalation. The core of the calculus models JavaScript essential features and is a subset of \ljs. \ljs\ is a Scheme dialect described in \cite{LambdaJS} and used to desugar JavaScript in order to simplify it in few construct with easy semantic behavior. It has been used to do static analysis on JavaScript code in \cite{Strobe} and \cite{LambdaJSMightVanHorn}. It admit functions, object (i.e., records) and mutable references. Here we are not using exceptions and break statements for the sake of simplicity. On the other hand, we added specific constructs to explicitly deal with privilege-based access control and privilege escalation. We rely on a channel-based communication model based on asynchronous message exchanges and handlers. Send expression and its corresponding handler are similar to the ones used in \cite{Lintent}. 
 
-The desugaring function has an interesting feature since it translates Javascript, that is not lexically scoped, to \ljs that is lexically scoped. This simplifies the analysis because remove the complexity to deal with a scoping different to the statical one. In \cite{LambdaJS} is shown how the desugaring function transform correctly these two different scoping approaches.
+The desugaring function has an interesting feature since it translates JavaScript, that is not lexically scoped, to \ljs\ that is lexically scoped. This simplifies the analysis because it removes the complexity of dealing with a scoping different to the statical one. In \cite{LambdaJS} is shown how the desugaring function transforms correctly these two different scoping approaches.
 
 \subsection{Syntax}
 Now we introduce the syntax of our calculus starting from values, expressions, memories, handlers, instances and systems. We then have a example to show how it works.
 
 We assume denumerable sets of names $\names$ (ranged over by $a,b,m,n$) and variables $\vars$ (ranged over by $x,y,z$). We let $c$ range over constants, including numbers, strings, boolean values, unit and the ``undefined'' value; we also let $r$ range over references in $\refs$, i.e., memory locations. The calculus is parametric with respect to an arbitrary lattice of permissions $(\perms,\sqsubseteq)$ and we let $\rho$ range over $\perms$. Finally, we assume a denumerable set of labels $\labs$ (ranged over by $\ell$) to support our static analysis. All the sets above are assumed pairwise disjoint.
 
-Variables can be either bound or free. Expressions  $\lambda$, ``let'' the handler $\handler{a}{x}{\rho}{e}{\rho'}$ are binding operators for variables: the notions of free variables fv arise as expected. In other words the three construct over, bind a value to a variable and in the expression that follows the bind the variable lookup gives the value of its in the bind. \todo{stabile?}
+Variables can be either bound or free. Expressions  $\lambda$, ``let'', the handler $\handler{a}{x}{\rho}{e}{\rho'}$ are binding operators for variables: the notions of free variables fv arise as expected.
 
 \subsubsection{Values.}
-Let us now introduce the possible native value that are found in the calculus.
 We let $u,v$ range over \emph{values}, defined by the following productions:
 \begin{align*}
 c & ::= \mathit{num} ~|~ \mathit{str} ~|~ \mathit{bool} ~|~ \unit ~|~ \undef, \\
 u,v &::= n ~|~ x ~|~ c ~|~ r_{\ell} ~|~ \lam{x}{e} ~|~ \rec{\vec{str_i:v_i}}.
 \end{align*}
-A value could be either a name, a variable, a constant, a reference, a lambda or a record. A constant is either number, a string, boolean, unit (that means nothing) or undefined. Undefined is a Javascript special value returned from an invalid lookup on an object field. Records are maps from string to a value and we consider them \emph{closed}, without loss of expressiveness. This means that all lambdas in a record are closed, i.e., without free variables. Notice that references contains a label $\ell$. This is needed in our static analysis, but has no role in the semantics.
+A value could be either a name, a variable, a constant, a reference, a lambda or a record. A constant is either number, a string, boolean, unit (that means nothing) or undefined. Undefined is a JavaScript special value returned from an invalid lookup on an object field. Records are maps from string to a value and we consider them \emph{closed}, without loss of expressiveness. This means that all lambdas in a record are closed, i.e., without free variables. Notice that references contains a label $\ell$. This is needed in our static analysis, but has no role in the semantics.
 
 \begin{definition}[Serializable Value]
 \label{def:serializable}
@@ -35,7 +34,7 @@ A value $v$ is \emph{serializable} if and only if:
 This means that a serializable value are only names, constants references and record containing only serializable values. Functions and variables cannot be serialized. This fits the model of Chrome extension message passing interface described in \ref{subs:MPI} because it let only to send JSON-serialized objects, or strings.
 
 \subsubsection{Expressions.} 
-Now we introduce the expressions of the calculus. Since the calculus is functional there are no statements, but just expressions.
+Since the calculus is functional there are no statements, but just expressions.
 We let $e$ range over \emph{expressions}, defined by the following productions:
 \[
 \begin{array}{lcl}
@@ -44,7 +43,7 @@ e,f & ::= & v ~|~ \letexpr{x}{e}{e} ~|~ \appl{e}{e} ~|~ \op(\vec{e_i}) ~|~ \cond
 & | & \exercise{\rho}.
 \end{array}
 \]
-The operations $\op(\vec{e_i})$ is used for all arithmetic, boolean and string operations. It includes even string equality, denoted by $==$. The creation of new references comes with an annotation:
+The operations $\op(\vec{e_i})$ is used for all arithmetic, boolean and string operations. It includes also string equality, denoted by $==$. The creation of new references comes with an annotation:
 $\newref{\ell}{e}$ creates a fresh reference $r_\ell$ labelled by $\ell$.
 As said before, $\ell$ plays no role in the semantics: annotating the reference
 with the program point where it has been created is useful for our
@@ -74,7 +73,7 @@ h ::= \emptyset ~|~ h,\handler{a}{x}{\rho}{e}{\rho'}.
 \]
 The handler $\handler{a}{x}{\rho}{e}{\rho'}$ contains an expression $e$, which is granted permission $\rho'$. The handler is guarded by a channel $a$, which requires permission $\rho$ for write access: this protect the receiver against untrusted senders. When a message is sent over $a$, the handler is triggered and the expression $e$ will be disclosed and a new \emph{instance} with $e$ is created.
 
-In other world when a $\send{a}{v}{\rho_s}$ is executed on a channel $a$ all handler $\handler{a}{x}{\rho}{e}{\rho'}$ on the same channel $a$ with permission $\rho \sqsubseteq \rho_s$ are triggered. Triggering a handler means that the message value $v$ is bound to variable $x$ in the environment of $e$ and $e$ is executed in a new \emph{instance}.
+In other words when a $\send{a}{v}{\rho_s}$ is executed on a channel $a$ all handler $\handler{a}{x}{\rho}{e}{\rho'}$ on the same channel $a$ with permission $\rho' \sqsubseteq \rho_s$ may be triggered. Triggering a handler means that the message value $v$ is bound to variable $x$ in the environment of $e$ and $e$ is executed in a new \emph{instance}.
 
 \subsubsection{Instances.} 
 Instances are the active part of a system. They are spawned when a message is received by a handler and the function in it is executed. Instances contains a permission $\rho$ that is the same granted to the handler that has spawned it.
@@ -99,13 +98,13 @@ A \rightarrow B: \rec{tag: "okay", other: z}
 \end{array}
 \]
 Here the component A sends to B a message containing $\rec{tag: "init", val: x}$. Then B reply to A with $y$ and finally A respond to B with $\rec{tag: "okay", other: z}$
-In Chrome, and in \ljs, the handler of the component $B$ is programmed more or less as in table \ref{tab:OnMessageCalc}.
+In Chrome, and in \ljs, the handler of the component $B$ is programmed as in table \ref{tab:OnMessageCalc}.
 
 \begin{table}[tlb]
 \begin{small}
 \begin{center}
 \begin{tabular}{p{0.95\linewidth}}
-Javascript\\
+JavaScript\\
 \hline
 \lstset{language=java}
 \begin{lstlisting}
@@ -142,7 +141,7 @@ a(x <| SEND: BACK).
 \end{tabular}
 \end{center}
 \end{small}
-\caption{onMessage handler in Javascript and in \ljs}
+\caption{onMessage handler in JavaScript and in \ljs}
 \label{tab:OnMessageCalc}
 \end{table}
 
@@ -224,7 +223,7 @@ name. Hence, there might be two references with the same label but
 different names, but no pair of references with the same name and two
 different labels.
 
-We discuss some important points: in rule \irule{JS-PrimOp} we assume a $\delta$ function, which defines the behaviour of primitives operations. In rule \irule{JS-Ref} we ensure that running instances can only create memory cells they can access; in rule \irule{JS-Deref} and \irule{JS-SetRef} we perform the expected access control checks. For simplicity we excluded the rules for prototype inheritance of \ljs with no impact on the, but are included in the implementation. The prototype inheritance of Javascript is modeled in \ljs as a recursion on the \texttt{\_\_proto\_\_} field if an attribute is not found in the current object, and if the \texttt{\_\_proto\_\_} field does not exist is returned the value \texttt{undefined}.
+We discuss some important points: in rule \irule{JS-PrimOp} we assume a $\delta$ function, which defines the behaviour of primitives operations. In rule \irule{JS-Ref} we ensure that running instances can only create memory cells they can access; in rule \irule{JS-Deref} and \irule{JS-SetRef} we perform the expected access control checks. For simplicity we excluded the rules for prototype inheritance of \ljs\ with no impact on the analysis, but them are included in the implementation. The prototype inheritance of JavaScript is modeled in \ljs as a recursion on the \texttt{\_\_proto\_\_} field if an attribute is not found in the current object, and if the \texttt{\_\_proto\_\_} field does not exist is returned the value \texttt{undefined}.
 
 \begin{table}[p]
 \small
@@ -343,12 +342,13 @@ Our security property is given over \emph{initial} systems, i.e., a system with 
 
 \begin{definition}[Safety Despite Compromise]
 \label{def:safety}
-A system $s = \sys{\mu}{h}{\emptyset}$ is \emph{$\rho$-safe despite $\rho'$} (with $\rho \not\sqsubseteq \rho'$) if and only, for any $\rho'$-opponent $(h_o,i_o)$, the system $s' = \sys{\mu}{h,h_o}{i_o}$ exercises at most $\rho$.
+A system $s = \sys{\mu}{h}{\emptyset}$ is \emph{$\rho$-safe despite $\rho'$} (with $\rho \not\sqsubseteq \rho'$) if and only if, for any $\rho'$-opponent $(h_o,i_o)$, the system $s' = \sys{\mu}{h,h_o}{i_o}$ exercises at most $\rho$.
 \end{definition}
-In other words this crucial definition state that an \emph{initial} system is \emph{$\rho$-safe despite $\rho'$} if each $\rho'$-opponent cannot alter the system in order to access to a privilege bigger than $\rho$. This means that a system is safe if the opponent cannot access privileges that the system initially did not have. For example in the chrome extension, given a clean component that executes at most permission \texttt{tabs}, an attacker that compromise it cannot access privilege higher than \texttt{tabs}.
+In other words, This crucial definition state that an \emph{initial} system is \emph{$\rho$-safe despite $\rho'$} if each $\rho'$-opponent cannot alter the system in order to access to a privilege bigger than $\rho$.
 
 \section{Example}
 \label{sec:Example}
+\todo [inline] {pulire...}
 Consider an extension made of two content scripts $CS1,CS2$ and a background page $B$. Assume that $CS1$ sends only messages with tag \texttt{Message1} and $CS2$ sends only messages with tag \texttt{Message2}.
 
 A simple encoding of the Google Chrome extension in our calculus is the following:
