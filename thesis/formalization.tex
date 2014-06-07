@@ -100,7 +100,7 @@ A \rightarrow B: \rec{tag: "okay", other: z}
 Here the component A sends to B a message containing $\rec{tag: "init", val: x}$. Then B reply to A with $y$ and finally A respond to B with $\rec{tag: "okay", other: z}$
 In Chrome, and in \ljs, the handler of the component $B$ is programmed as in table \ref{tab:OnMessageCalc}.
 
-\begin{table}[tlb]
+\begin{table}[htb]
 \begin{small}
 \begin{center}
 \begin{tabular}{p{0.95\linewidth}}
@@ -352,22 +352,31 @@ In other words, This crucial definition state that an \emph{initial} system is \
 Consider an extension made of two content scripts $CS1,CS2$ and a background page $B$. Assume that $CS1$ sends only messages with tag \texttt{Message1} and $CS2$ sends only messages with tag \texttt{Message2}.
 
 A simple encoding of the Google Chrome extension in our calculus is the following:
-\begin{verbatim}
-cs1(x <| CS1: SEND).send(b,{tag: "Message1"} |> BACK)
-cs2(x <| CS2: SEND).send(b,{tag: "Message2"} |> BACK)
-b(x <| SEND: BACK).
-        if (x[tag] == "Message1") then exercise(rho) 
-        else exercise(rho')
-\end{verbatim}
+\begin{small}
+\begin{lstlisting}[mathescape]
+Content script 1:
+	cs1(x <| CS1: SEND).$\send{b}{$\{tag: "Message1"\}$}{$BACK$}$ 
+Content script 2:
+	cs2(x <| CS2: SEND).$\send{b}{$\{tag: "Message2"\}$}{$BACK$}$ 
+Background:
+	b(x <| SEND: BACK).
+		if (== (x["tag"], "Message1")) then exercise($\rho$)
+		else exercise($\rho'$)
+\end{lstlisting}
+\end{small}
 Assume that both $\rho$ and $\rho'$ are bounded above by BACK, while all the other permissions are unrelated. More sensible encodings are possible, but this is enough to present the analysis.
+
+This scenario is composed by two content scripts and a background. Each content script is modeled by a handler that receives messages respectively on channel \texttt{cs1} and \texttt{cs2}, requires permissions \texttt{CS1} and \texttt{CS2} and exercises permission \texttt{SEND}. When triggered each content script sends a message to the background with tag \texttt{Message1} or \texttt{Message2} on channel \texttt{b} with permission \texttt{BACK}. The background waits for messages on channel \texttt{b} having at least permission \texttt{BACK}. Then, according to the tag of the message, exercise $\rho$ or $\rho'$.
 
 \subsection{Privilege escalation analysis.}
 The idea is that each handler has a ``type'' which describes the permissions which are needed to access it, and the permissions which will be exercised (also transitively) by the handler. For instance, the example above is acceptable according to the following assumptions:
-\begin{verbatim}
-cs1: CS1 ---> rho join rho'
-cs2: CS2 ---> rho join rho'
-b:   SEND ---> rho join rho'
-\end{verbatim}
+\begin{small}
+\begin{lstlisting}[mathescape]
+cs1: CS1  ---> $\rho \join \rho'$
+cs2: CS2  ---> $\rho \join \rho'$
+b:   SEND ---> $\rho \join \rho'$
+\end{lstlisting}
+\end{small}
 These assumptions environment tells us that a caller with permission SEND can escalate up to $\rho \join \rho'$. All these aspects are formalized in the \emph{abstract stack} we introduce below and our novel notion of \emph{permission leakage}, which quantifies the attack surface of the message passing interface.
 
 \subsection{Refining the analysis.}
@@ -384,35 +393,26 @@ where TOP signifies that $cs1$ can be accessed by the opponent (hence any value 
 cs1: CS1 ---> rho
 b:   SEND ---> rho
 \end{verbatim}
-which captures the correct information for a CS1-opponent (i.e., a CS1-opponent can only escalate $\rho$). \todo {lasciato uguale...}
+which captures the correct information for a CS1-opponent (i.e., a CS1-opponent can only escalate $\rho$).
 
-\todo[inline]{commented work here! maybe remove or move to future work.}
-\begin{comment}
-\paragraph{Permission bundling analysis.}\todo{outdated example. still useful for next project.}
-Identifying dangerous permission bundling is challenging, since it depends on the structure of the exchanged messages. For instance, if both $CS1$ and $CS2$ employ the same tags, then the handler $B$ is not bundled at all and must be accepted. We associate to each handler a set of incoming messages and a set of outgoing messages, as follows:
-\begin{verbatim}
-cs1: (emptyset, b <- {tag: "Message1"})
-cs2: (emptyset, b <- {tag: "Message2"})
-b:   ({{tag: "Message1"}, {tag: "Message2"}}, emptyset)
-\end{verbatim}
-This is what is represented in the \emph{abstract networks} which we introduce below, even though the real structure of the abstract networks is slightly more complicated than this to make the static analysis more precise.
-
-Based on this information, we understand that we can refactor the code as follows:
-\begin{verbatim}
-cs1(x <| top).send(b1,{tag: "Message1"} |> B) with CS1
-cs2(x <| top).send(b2,{tag: "Message2"} |> B) with CS2
-b1(x <| CS1).if (x[tag] == "Message1") then >> rho else >> rho' with B
-b2(x <| CS2).if (x[tag] == "Message1") then >> rho else >> rho' with B
-\end{verbatim}
-For the opponent-aware analysis, this code is exactly as dangerous as the old one, since compromised components can just ignore tags (which indeed do not provide any security guarantee). Still, we can reuse our flow analysis to eliminate dead code:
-\begin{verbatim}
-cs1(x <| top).send(b1,{tag: "Message1"} |> B) with CS1
-cs2(x <| top).send(b,{tag: "Message2"} |> B) with CS2
-b1(x <| CS1).>> rho with B
-b2(x <| CS2).>> rho' with B
-\end{verbatim}
-Now the opponent-aware analysis shows a different surface for privilege escalation. Specifically, a caller with $CS1$ can escalate to $\rho$, while a caller with $CS2$ can escalate to $\rho'$, which is much better than before.
-\end{comment}
+\subsection{Message by the opponent.}
+\label{subs:MessByOpp}
+Let us modify a little bit the previous example in order to give to the attacker a greater power on the compromised component:
+\begin{small}
+\begin{lstlisting}[mathescape]
+Content script 1:
+	cs1(x <| CS1: SEND).
+		let message = ref {tag: "Message1"}
+		$\send{b}{$deref message$}{$BACK$}$ 
+Content script 2:
+	cs2(x <| CS2: SEND).$\send{b}{$\{tag: "Message2"\}$}{$BACK$}$ 
+Background:
+	b(x <| SEND: BACK).
+		if (== (x["tag"], "Message1")) then exercise($\rho$)
+		else exercise($\rho'$)
+\end{lstlisting}
+\end{small}
+In this scenario cs1 store the message to be sent in a reference. This, without the attacker do not change the behavior of the system, but an attacker having permission \texttt{CS1} $\not\sqsubseteq$ \texttt{SEND} that compromises cs1, is able to alter the content of the message. In this case the message field \texttt{tag} can contains any value, so the attacker is able to escalate $\rho \join \rho'$.
 
 \section{Analysis}
 \label{sec:Analysis}
@@ -753,22 +753,28 @@ registered by the opponent may receive any value (2) and (3).
 \label{tab:privi-system}
 \end{table}
 
-\paragraph{Running Example.}
-For our running example, we are able to analyse the code with respect
-to the abstract stack $\abstack$ such that: $\abstack(cs1, CS1) =
-(\top,\rho \join \rho')$ and $\abstack(cs2,CS2) = (\top,\rho \join
-\rho')$ and $\abstack(b,B) = (CS1 \meet CS2,\rho \join \rho')$. \todo{migliorare}
+%\paragraph{Running Example.}
+%For our running example of section \ref{sec:Example}, we are able to analyse the code with respect
+%to the abstract stack $\abstack$ such that: $\abstack(cs1, CS1) =
+%(\top,\rho \join \rho')$ and $\abstack(cs2,CS2) = (\top,\rho \join
+%\rho')$ and $\abstack(b,B) = (CS1 \meet CS2,\rho \join \rho')$. \todo{migliorare}
 
 \section{Theorem}
 \label{sec:Theorem}
+Now we introduce the main finding of our analysis. This theorem gives a quantitative measure on how a system is safe against the attack of an opponent. 
 \begin{theorem}[Safety Despite Compromise]
 \label{thm:safety-compromise}
 Let $s = \mu;h;\emptyset$. If $\absC \Vdash s \despite \rho$, then $s$ is $\rho'$-safe despite $\rho$ for $\rho' = \permsleak{\rho}(\absC)$. 
 \end{theorem}
+In other words, given $\rho$ (permission of the attacker), is possible to compute an acceptable estimate of the system $\despite \rho$ (behavior of the system with the opponent into). And from such estimate, is possible to predict an upper bound of all permissions that such $\rho$ opponent can escalate.
+
+In section \ref{sec:Example} we showed how an opponent that compromises cs1 was able to escalate only permission $\rho$ because $\permsleak{\rho}(\absC) = \rho$, while in the second example \ref{subs:MessByOpp} the opponent was able to escalate up to $\rho \join \rho'$ because $\permsleak{\rho}(\absC) = \rho \join \rho'$.
+
+The importance of this theorem is showed by the fact that given an real Chrome extension, with this theorem and the analysis, we are able to show all possible privileges that an attacker can escalate to. This is very important because we can prove that a certain extension exposes to the attacker only certain permissions, protecting the other.
 
 \section{Requirements for correctness}
 \label{sec:CorrectnesReqs}
-In this part we state the requirement that the abstract domains must satisfy in order to keep the analysis sound.
+In the previous part we abstract the choice of the abstract domains used in the analysis. Here we state the requirement that the abstract domains must satisfy in order to keep the analysis sound.
 
 \begin{assumption}[Abstracting Finite Domains]
 \label{asm:finite}

@@ -1,6 +1,18 @@
+In this chapter we will show how the calculus and the analysis of chapter \ref{chap:Formalization} has been implemented. We developed a tool written in F\# that from a real chrome extension is able to detect which privileges ca be obtained by an attacker that infect a content script.
+
+In order to apply the analysis we had to desugar the JavaScript sources in \ljs. To this purpose we use the desugarer prototype that is a tool written in Haskell and described in \cite{LambdaJS}. Then we parse the desugared \ljs\ file and we start the analysis.
+
+Since we are using the 0-CFA approach for the analysis, we do not have any context, so to enhance the precision of the analysis (soundness is kept) we alpha-rename the bound variables in order to distinguish them. We also mark the nodes of the abstract syntax tree with unambiguous labels and we annotate references with $\ell$. After that the AST is passed to the algorithm that generates the constraints producing a set of constraints. After that, given an abstract value representation, the constraint are resolved without using the AST any more producing an estimate for the initial program.
+Finally analyzing the estimate we show the permission that an attacker can escalate if it infect a content script.
+
+
 \section{Analysis specification}
 \label{sec:AnalysisSpec}
-specifica dell'analisi
+As explained in section \ref{sec:FlowLogic} the flow logic can be done using various approaches. In the analysis of section \ref{sec:Analysis} it is used an abstract succinct approach, but for the implementation of the analysis it is needed a compositional verbose one. The difference between abstract and compositional approach are that the former is closer to the semantic and tend to be simpler, while the latter is more syntax directed. Moreover the abstract approach lets the analysis of lambdas in the application point, while the other analyze it at definition point. The function call in the compositional approach just link the arguments to the formal parameters of the lambda, and links the result of the lambda to the value of the call node.
+
+The differences between a succinct and a verbose analysis are that the succinct analysis focus on the top-level part of the analysis estimate, while the verbose, as in data flow analysis and constraint based analysis, reports all the internal flow data. This second approach is done using caches that holds the analysis informations. 
+
+In the following sections we translate the analysis of section \ref{sec:Analysis} to a compositional verbose one and then we transform the judgments to a set of constraints.
 
 \begin{comment}
 \subsection{Abstract succinct}
@@ -23,7 +35,7 @@ specifica dell'analisi
 {[\textit{PV-Ref}]}&\multicolumn{3}{l}{$\aenvs \modelrho \rec{\vec{str_i : v_i}} : \vat$ iff $\{\absrec{\vec{str_i: v_i}}_{\absC,\rho}\} \sqsubseteq \hat{v}$} \\
 \end{tabular}
 
-\begin{table}[tlb]
+\begin{table}[htb]
 \begin{tabular}{l l l l}
 {[\textit{PE-Val}]}&\multicolumn{3}{l}{$\caest {v}$ iff}\\
 &&\multicolumn{2}{l}{$\aenvs \modelrho v : \vat$} \\
@@ -60,7 +72,7 @@ specifica dell'analisi
 \caption{Abstract succinct part 1.}
 \label{tab:AbstSucc1}
 \end{table}
-\begin{table}[tlb]
+\begin{table}[htb]
 \begin{tabular} {l l l l}
 {[\textit{PE-GetField}]}&\multicolumn{3}{l}{$\caest {\lookup {e_1} {e_2}} $ iff}\\
 &&\multicolumn{2}{l}{$ \caesti {e_1} {1} \wedge \rho_1 \sqsubseteq \rho \wedge$}\\
@@ -105,45 +117,41 @@ specifica dell'analisi
 \end{table}
 \end{comment}
 
-
 \newcommand{\all}[0]{\alpha}
 
-%\newcommand{\Cat}[0]{\hat{C}}
-%\newcommand{\muat}[0]{\hat{\mu}}
-%\newcommand{\Env}[0]{\hat{\Gamma}}
-%\newcommand{\Pat}[0]{\hat{P}}
-%\newcommand{\modelrho}{\models_{\rho_s}}
-%\newcommand{\aenvs}{(\Env,\muat)}
-%\newcommand{\caesti}[2]{\aenvs \modelrho #1 : \vat_{#2} \gg \rho_{#2}}
-%\newcommand{\caest}[1]{\aenvs \modelrho #1 : \vat \gg \rho}
-\newcommand{\cenvs}{\absC}
-\newcommand{\Cat}[0]{\absC_{\hat{C}}}
-\newcommand{\muat}[0]{\absC_{\hat{\mu}}}
-\newcommand{\Env}[0]{\absC_{\hat{\Gamma}}}
-\newcommand{\Pat}[0]{\absC_{\hat{P}}}
-\newcommand{\Phiat}[0]{\absC_{\hat{\Phi}}}
-\newcommand{\Upsat}[0]{\absC_{\hat{\Upsilon}}}
-\newcommand{\ccest}[1]{\cenvs \models_{c \rho_s} #1}
-\newcommand{\ccestl}[1]{\cenvs \models_{c \rho_s} {(#1)}^{\alpha}}
+\newcommand{\absCV}{\mathcal{CV}}
+\newcommand{\cenvs}{\absCV}
+\newcommand{\Cat}[0]{\absCV_{\hat{C}}}
+\newcommand{\muat}[0]{\absCV_{\hat{\mu}}}
+\newcommand{\Env}[0]{\absCV_{\hat{\Gamma}}}
+\newcommand{\Pat}[0]{\absCV_{\hat{P}}}
+\newcommand{\Phiat}[0]{\absCV_{\hat{\Phi}}}
+\newcommand{\Upsat}[0]{\absCV_{\hat{\Upsilon}}}
+\newcommand{\ccest}[1]{\cenvs \Vdash_{cv, \rho_s} #1}
+\newcommand{\ccestl}[1]{\cenvs \Vdash_{cv, \rho_s} {(#1)}^{\alpha}}
 \newcommand{\lbt}[1]{{e_#1}^{\alpha_#1}}
-%\newcommand{\letexprs}[3]{\mathbf{let}\ \vec{#1 = #2}\ \mathbf{in}\ #3}
 
 \subsection{Compositional Verbose}
+In compositional verbose approach we add an unambiguous label $\all$ to all expression in the syntax and the result of each expression are stored in an abstract cache $\hat{C}$ that its a map from nodes to abstract values. Even the permissions of each expression are stored in caches $\hat{P}$.
 
+To enhance readability we let $\absCV = \hat{C}, \hat{P}, \hat{\Gamma}, \hat{\mu},  \abstack, \absnet$ to be the the compositional verbose environment that is a six-tuple made of the following components:
 \[
 \begin{array}{llcl}
 \mathit{Abstract\ cache} & \hat{C} & : & A \rightarrow \absvalues \\
+\mathit{Permission\ cache} & \hat{P} & : & \perms \rightarrow \perms \\
 \mathit{Abstract\ variable\ environment} & \hat{\Gamma} & : & \vars \rightarrow \absvalues \\
 \mathit{Abstract\ memory} & \hat{\mu} & : & \labs \times \perms \rightarrow \absvalues \\
-\mathit{Abstract\ permission\ cache} & \hat{P} & : & \perms \rightarrow \perms \\
 \mathit{Abstract\ stack} & \abstack & : & \names \times \perms \rightarrow \perms \times \perms \\
 \mathit{Abstract\ network} & \absnet & : & \names \times \perms \rightarrow \absvalues.
 \end{array}
 \]
 
-To lighten the notation, we denote by  $\absC$ all $\hat{C}, \hat{\Gamma}, \hat{\mu}, \hat{P}, \abstack, \absnet$.
+While $\hat{\Gamma}, \hat{\mu},  \abstack, \absnet$ are the same of the previous chapter, the abstract cache $\hat{C}$, and permission cache $\hat{P}$ are specific of the compositional approach.
+
+Table \ref{tab:CompVerb1} \ref{tab:CompVerb2} contains the rules for the compositional verbose analysis. Note that are very similar to the abstract succinct except that the expression of the form $\absC \Vdash_\rho e : v \gg \rho$ do not produce $v$ and $\rho$, but analysis store them in the cache and became $\absCV \Vdash_{cv,\rho} (e^{\all_1})^\all$ so $\Cat(\all) = v$ and $\Pat(\all) = \rho$.
+
 %\newcommand{\all}[0]{\alpha}
-\begin{table}
+\begin{table}[htb]
 \begin{tabular}{l l l l}
 {[\textit{CV-Val}]}&\multicolumn{3}{l}{$ \ccestl {v} $ iff $\{\vat\} \sqsubseteq \Cat(\all)$} \\ 
 {[\textit{CV-Lambda}]}&\multicolumn{3}{l}{$ \ccestl {\lam{x}{\lbt 0}} $ iff}\\
@@ -188,7 +196,7 @@ To lighten the notation, we denote by  $\absC$ all $\hat{C}, \hat{\Gamma}, \hat{
 \label{tab:CompVerb1}
 \end{table}
 
-\begin{table}[tlb]
+\begin{table}[htb]
 \begin{tabular} {l l l l}
 {[\textit{CV-GetField}]}&\multicolumn{3}{l}{$\ccestl {\lookup {\lbt 1} {\lbt 2}} $ iff}\\
 &&\multicolumn{2}{l}{$ \ccest {\lbt1} \wedge \Pat(\all_1) \sqsubseteq \Pat(\all) \wedge$}\\
@@ -230,8 +238,6 @@ To lighten the notation, we denote by  $\absC$ all $\hat{C}, \hat{\Gamma}, \hat{
 \label{tab:CompVerb2}
 \end{table}
 
-
-
 \section{Constraint generation}
 \label{sec:ConstraintGen}
 \newcommand{\genl}[1]{\mathcal{C}_{*\rho_s}\llbracket (#1)^\all \rrbracket}
@@ -246,41 +252,92 @@ To lighten the notation, we denote by  $\absC$ all $\hat{C}, \hat{\Gamma}, \hat{
 \newcommand{\braces}[1]{\{ #1 \} }
 \newcommand{\parens}[1]{\( #1 \) }
 
-Constraint elements: $\El$.
+Now since we have an analysis that is compositional-verbose, we can design an algorithm to compute the set of constraints derived from the analysis. Then such set is given to a constraint solver algorithm to compute an estimate for the program.
+
+\subsection{Constraints}
+We now define the following elements:
 \[
 \begin{array}{llcl}
-\mathit{Cache\ element}      & \Cel   & : & A \rightarrow \absvalues \\
-\mathit{Permission\ Element} & \Pel   & : & A \rightarrow \perms\\
-\mathit{Var\ element}        & \Rel   & : & \vars \rightarrow \absvalues \\
-\mathit{State\ element}      & \Mel   & : & \labs \times \perms \rightarrow \absvalues \\
-\mathit{Stack\ element}      & \Upsel & : & \names \times \perms \rightarrow \perms \times \perms \\
-\mathit{Network\ element}    & \Phiel & : & \names \times \perms \rightarrow \absvalues.
+\mathit{Cache}      & \Cel   & : & A \rightarrow \absvalues \\
+\mathit{Permission} & \Pel   & : & A \rightarrow \perms\\
+\mathit{Var}        & \Rel   & : & \vars \rightarrow \absvalues \\
+\mathit{State}      & \Mel   & : & \labs \times \perms \rightarrow \absvalues \\
+\mathit{Stack}      & \Upsel & : & \names \times \perms \rightarrow \perms \times \perms \\
+\mathit{Network}    & \Phiel & : & \names \times \perms \rightarrow \absvalues.
 \end{array}
 \]
+This are the implementation of the elements of the environments and are maps as described above.
 
-Let c 
-Constraint form.
+A constraint element named $\El$ is a pure syntactical element that represent the index of the map described above.
 \[
-\begin{array}{lrcl}
-\mathit{Term\ inclusion} & \{\vat\} & \sqsubseteq & \El \\
-\mathit{Element\ inclusion} & \El & \sqsubseteq & \El \\
-%\mathit{Permission\ inclusion} & \Pel(\ell) & \sqsubseteq & \Pel(\ell') \\
-\mathit{Operation} & \widehat{Op}(\vec{\El_i}) & \sqsubseteq & \El \\
-\mathit{Implication} & Constraint & \Rightarrow & \El \sqsubseteq \El \\
-
-\mathit{Implication} & \{\vat\} \sqsubseteq \El & \Rightarrow & \El \sqsubseteq \El \\
-
+\begin{array}{llcl}
+\mathit{Cache\ element}      & \Cel(\all)       \\ %& : & \absvalues \\
+\mathit{Permission\ Element} & \Pel(\all)       \\ %& : & \perms\\
+\mathit{Var\ element}        & \Rel(x)          \\ %& : & \absvalues \\
+\mathit{State\ element}      & \Mel(\ell, \rho) \\ %& : & \absvalues \\
+\mathit{Stack\ element}      & \Upsel(a, \rho)  \\ %& : & \perms \times \perms \\
+\mathit{Network\ element}    & \Phiel(a, \rho)  \\ %& : & \absvalues.
 \end{array}
 \]
-Misc:
+As we can see an element is composed by the cache element to which is referred and its index.
+
+Now let us introduce the constraints. We let $c$ range over \emph{constraints}, defined by the following productions:
+\[
+\begin{array}{lcrcll}
+c & ::= &\{\vat\} & \sqsubseteq & \El & \mathit{Term\ inclusion}\\
+& | & \El & \sqsubseteq & \El & \mathit{Element\ inclusion} \\
+& | & \widehat{Op}(\vec{\El_i}) & \sqsubseteq & \El & \mathit{Operation inclusion}\\
+& | & c & \Rightarrow & c & \mathit{Implication}\\
+\end{array}
+\]
+The main forms of constraints are:
+\begin{itemize}
+\item $\{\true\} \sqsubseteq \Cel(\all) $ that means that $\true$ must be in the possible estimate of the node marked with $\all$;
+\item $\{\undef\} \sqsubseteq \Rel(x) $ that means that $\undef$ must be in the possible estimate of the $x$ variable;
+\item $\Cel(\all_1) \sqsubseteq \Cel(\all) $  that means that the estimate of node $\all_1$ must be contained in the node $\all$ (as before the same are with the variables);
+\item $\widehat{Op}_+(\Cel(\all_1), \Cel(\all_2))\sqsubseteq \Cel(\all)$  that means that the result of the abstract operation corresponding to $+$ with $\Cel(\all_1)$ and $\Cel(\all_2)$ as arguments must be contained in the estimate of $\Cel(\all)$;
+\item $\{\true\}\sqsubseteq \Cel(\all_0) \Rightarrow \Cel(\all_1) \sqsubseteq \Cel(\all)$ that means that the fact that $\true$ is contained in the estimate of $\Cel(\all_0)$ implies that the value of $\Cel(\all_1)$ must be contained in the estimate of the node $\Cel(\all)$ (this form is used in the if construct);
+\item $\{\lam {x} {\lbt 0}\}\sqsubseteq \Cel(\all_1) \Rightarrow \Cel(\all_0) \sqsubseteq \Cel(\all)$ that means that the fact that $\lam {x} {\lbt 0}$ is contained in the estimate of $\Cel(\all_1)$ implies that the value of the lambda (contained in $\Cel(\all_0)$) must be contained in the estimate of the node $\all$ (this form is used in the application);
+\end{itemize}
+
+In order to transform the $\forall$ construct of the compositional rules in our constraints (e.g., in the app expression or in the \texttt{deref} expression), since both lambdas and references are finite sets in the program, we generate one implication constraint for each element in the program in this way: let be $Ref_*$ the set of all reference labels of the program $\forall \ell \in v_1: \muat(\ell, \rho_s) \sqsubseteq \Cat(\all)$ is transformed in the set $\braces{\ell \in \Cel(\all_1) \Rightarrow \Mel(\ell, \rho_s) \sqsubseteq \Cel(\all) | \ell \in Ref_*}$.
+
+In this way we define these finite sets:
 \[
 \begin{array}{l l}
-r_* & $is the set of all references of the program;$\\
+Ref_* & $is the set of all references of the program;$\\
 lambda_* & $is the set of all lambdas of the program;$\\
+Names_* & $is the set of all names in the program;$\\
+NamePerms_* & $ is the set of all permission associated with channel in the program.$\\
 \end{array}
 \]
 
-\begin{table}
+\subsection{Generation}
+To obtain the set of constraint the AST of the program (composed only by expression since there are no statements) is given to an algorithm that traverse it and, for each subtree of it, returns the set of constraint generated. The algorithm in tables \ref{tab:ConstGen1} and \ref{tab:ConstGen2} $\genl {e}$ explore the tree and produces the set of constraints.
+
+As simple example the program $(((\lam {x} {x^{1}})^{2} (\lam {y} {False^{3}})^{4})^{5} True^{6})^{7}$ , ignoring the permission check, yields this set of constraints:
+\[
+\begin{array}{lll}
+\{\\
+& \{\true\} &\sqsubseteq \Cel(6),\\
+& \{\false\} &\sqsubseteq \Cel(3),\\
+& \{\lam {x} {x^{1}}\} &\sqsubseteq \Cel(2),\\
+& \{\lam {y} {\true^{6}}\} &\sqsubseteq \Cel(4),\\
+& \Rel(x) &\sqsubseteq \Cel(1),\\
+& \{\lam {x} {x^{1}}\} &\sqsubseteq \Cel(2) \Rightarrow \Cel(1) \sqsubseteq \Cel(5),\\
+& \{\lam {x} {x^{1}}\} &\sqsubseteq \Cel(2) \Rightarrow \Cel(4) \sqsubseteq \Rel(x),\\
+& \{\lam {x} {x^{1}}\} &\sqsubseteq \Cel(5) \Rightarrow \Cel(1) \sqsubseteq \Cel(7),\\
+& \{\lam {x} {x^{1}}\} &\sqsubseteq \Cel(5) \Rightarrow \Cel(6) \sqsubseteq \Rel(x),\\
+& \{\lam {y} {\true^{6}}\} &\sqsubseteq \Cel(2) \Rightarrow \Cel(3) \sqsubseteq \Cel(5),\\
+& \{\lam {y} {\true^{6}}\} &\sqsubseteq \Cel(2) \Rightarrow \Cel(4) \sqsubseteq \Rel(y),\\
+& \{\lam {y} {\true^{6}}\} &\sqsubseteq \Cel(5) \Rightarrow \Cel(3) \sqsubseteq \Cel(7),\\
+& \{\lam {y} {\true^{6}}\} &\sqsubseteq \Cel(5) \Rightarrow \Cel(6) \sqsubseteq \Rel(y)\\
+\}
+\end{array}
+\]
+\todo{expand?}
+
+\begin{table}[htb]
 \begin{tabular}{l l l l}
 {[\textit{CG-Val}]} & \multicolumn{3}{l}{$ \genl {v} = \vat \sqsubseteq \Cel(\all)$} \\ 
 {[\textit{CG-Var}]} & \multicolumn{3}{l}{$ \genl {x} = \Rel(x) \sqsubseteq \Cel(\all)$} \\ 
@@ -320,7 +377,7 @@ lambda_* & $is the set of all lambdas of the program;$\\
 \label{tab:ConstGen1}
 \end{table}
 
-\begin{table}[hbt]
+\begin{table}[htb]
 \begin{tabular} {l l l l}
 {[\textit{CG-GetField}]}&\multicolumn{3}{l}{$\genl {\lookup {\lbt 1} {\lbt 2}} = $}\\
 &&\multicolumn{2}{l}{$ \gen {\lbt1} \cup \gen {\lbt 2} \cup$}\\
@@ -352,11 +409,11 @@ lambda_* & $is the set of all lambdas of the program;$\\
 &&\multicolumn{2}{l}{$ \braces{\Pel(\all_1) \sqsubseteq \Pel(\all)} \cup \braces{\Pel(\all_2) \sqsubseteq \Pel(\all)} \cup$}\\
 &&\multicolumn{2}{l}{$\braces{\{\mathbf{unit}\} \sqsubseteq \Cel(\all)} \cup$}\\
 &&\multicolumn{2}{l}{$ \{ \{m\} \in \Cel(\all_1) \Rightarrow \Pel(\all) \sqsubseteq \rho_m \Rightarrow \Upsel(m, \rho_m) = (\rho_r, \rho_e)$}\\
-&&&$| \forall m \in Names_*, \forall \rho_m NamePerms_*\}\cup$\\
+&&&$| m \in Names_*, \rho_m \in NamePerms_*\}\cup$\\
 &&\multicolumn{2}{l}{$ \{ \{m\} \in \Cel(\all_1) \Rightarrow \Pel(\all) \sqsubseteq \rho_m \Rightarrow \rho_r \sqsubseteq \rho_s \Rightarrow \rho_e \sqsubseteq \Pel(\all)$}\\
-&&&$| \forall m \in Names_*, \forall \rho_m NamePerms_*\}\cup$\\
+&&&$| m \in Names_*, \rho_m \in NamePerms_*\}\cup$\\
 &&\multicolumn{2}{l}{$ \{ \{m\} \in \Cel(\all_1) \Rightarrow \Pel(\all) \sqsubseteq \rho_m \Rightarrow \rho_r \sqsubseteq \rho_s \Rightarrow \Cel(\all_2) \sqsubseteq \Phiel(m, \rho_m)$}\\
-&&&$| \forall m \in Names_*, \forall \rho_m NamePerms_*\}$\\
+&&&$| m \in Names_*, \rho_m \in NamePerms_*\}$\\
 {[\textit{CG-Exercise}]}& \multicolumn{3}{l}{$\genl {\exercise {\rho}} $}\\
 &&\multicolumn{2}{l}{$ \braces {\rho \sqsubseteq \rho_s \Rightarrow \rho \sqsubseteq \Pel(\all)} \cup $}\\
 &&\multicolumn{2}{l}{$ \mathbf{unit} \in \Cel(\all)$}\\

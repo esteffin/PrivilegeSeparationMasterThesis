@@ -3,3 +3,31 @@
 
 \section{Future works}%(unbundling)
 \label{sec:FutureWorks}
+
+\todo[inline]{commented work here! maybe remove or move to future work.}
+\begin{comment}
+\paragraph{Permission bundling analysis.}\todo{outdated example. still useful for next project.}
+Identifying dangerous permission bundling is challenging, since it depends on the structure of the exchanged messages. For instance, if both $CS1$ and $CS2$ employ the same tags, then the handler $B$ is not bundled at all and must be accepted. We associate to each handler a set of incoming messages and a set of outgoing messages, as follows:
+\begin{verbatim}
+cs1: (emptyset, b <- {tag: "Message1"})
+cs2: (emptyset, b <- {tag: "Message2"})
+b:   ({{tag: "Message1"}, {tag: "Message2"}}, emptyset)
+\end{verbatim}
+This is what is represented in the \emph{abstract networks} which we introduce below, even though the real structure of the abstract networks is slightly more complicated than this to make the static analysis more precise.
+
+Based on this information, we understand that we can refactor the code as follows:
+\begin{verbatim}
+cs1(x <| top).send(b1,{tag: "Message1"} |> B) with CS1
+cs2(x <| top).send(b2,{tag: "Message2"} |> B) with CS2
+b1(x <| CS1).if (x[tag] == "Message1") then >> rho else >> rho' with B
+b2(x <| CS2).if (x[tag] == "Message1") then >> rho else >> rho' with B
+\end{verbatim}
+For the opponent-aware analysis, this code is exactly as dangerous as the old one, since compromised components can just ignore tags (which indeed do not provide any security guarantee). Still, we can reuse our flow analysis to eliminate dead code:
+\begin{verbatim}
+cs1(x <| top).send(b1,{tag: "Message1"} |> B) with CS1
+cs2(x <| top).send(b,{tag: "Message2"} |> B) with CS2
+b1(x <| CS1).>> rho with B
+b2(x <| CS2).>> rho' with B
+\end{verbatim}
+Now the opponent-aware analysis shows a different surface for privilege escalation. Specifically, a caller with $CS1$ can escalate to $\rho$, while a caller with $CS2$ can escalate to $\rho'$, which is much better than before.
+\end{comment}
