@@ -1,7 +1,8 @@
 \section{Chrome extension architecture}
 \label{sec:ExtDetails}
-As already discussed before, a Chrome extension is a software that extends the potentiality of the browser and enhances the user experience. Such extensions are not stand-alone software, but are integrated in the browser. The integration is done through a powerful API that expose to the developer lots of functionality of the browser. Since Chrome extensions interact with web pages and with browser them are developed using the classic web-style language: JavaScript. Extension can have even HTML or CSS files and can contains various resources that can be either local or remote resources as typical in the web. \todo{refine...}
-As showed in \cite{ChromeExtensionOnline} a Chrome Extension \todo{si presentano come} an archive containing files of various kind like JavaScript, HTML, JSON, images and others that extends the browser features.
+As already discussed before, a Chrome extension is a software that extends the potentiality of the browser and enhances the user experience. Such extensions are not stand-alone software, but are integrated in the browser. The integration is done through a powerful API that expose to the developer lots of functionality of the browser. Since Chrome extensions interact with web pages and with browser them are developed using the classic web-style language: JavaScript. Extension can have even HTML or CSS files and can contains various resources that can be either local or remote resources as typical in the web.
+
+As showed in \cite{ChromeExtensionOnline} a Chrome Extension is an archive containing files of various kind like JavaScript, HTML, JSON, images and others that extends the browser features.
 
 A basic extension is composed by a manifest file and one or more JavaScript or Html files.
 
@@ -60,14 +61,20 @@ In table \ref{src:AManifest} we can see a manifest of a simple Chrome extension 
 \end{table}
 
 \subsection{Content scripts}
-Content scripts are JavaScript source files that are automatically injected to the web page if this matches with the pattern defined in the manifest. Otherwise it can be programmatically injected by a background page using the \texttt{chrome.tabs.executeScript} call (the function requires \texttt{tabs} permission). In the example of table \ref{tab:URLPatSyn} the JavaScript file \texttt{myscript.js} is injected to all sub-pages of \texttt{https://moodle.dsi.unive.it/}. In the extension framework content scripts are designed to interact with pages. Since this interaction could be the entry point for an attacker, content scripts have no permissions except the one used to communicate with the extension core. In order to reduce injection of code in the content script from a malign page, there is a strong isolation between the heaps of these two. Content scripts of the same extension are run together in their own address space, and the only way they have to interact with the page on which they are injected is via the DOM API. DOM API lets the content scripts access and modify only standard fields of the DOM object, while other changes are kept locally\cite{ChromeExtSpec}. This strong isolation mitigate the risk of code injection since it blocks almost completely pointer exchange. 
-\missingfigure{Figura dell'articolo della Felt su isolated world.}
+Content scripts are JavaScript source files that are automatically injected to the web page if this matches with the pattern defined in the manifest. Otherwise it can be programmatically injected by a background page using the \texttt{chrome.tabs.executeScript} call (the function requires \texttt{tabs} permission). In the example of table \ref{tab:URLPatSyn} the JavaScript file \texttt{myscript.js} is injected to all sub-pages of \texttt{https://moodle.dsi.unive.it/}. In the extension framework content scripts are designed to interact with pages. Since this interaction could be the entry point for an attacker, content scripts have no permissions except the one used to communicate with the extension core. In order to reduce injection of code in the content script from a malign page, there is a strong isolation between the heaps of these two. Content scripts of the same extension are run together in their own address space, and the only way they have to interact with the page on which they are injected is via the DOM API. DOM API lets the content scripts access and modify only standard fields of the DOM object, while other changes are kept locally\cite{ChromeExtSpec}. This strong isolation mitigate the risk of code injection since it blocks almost completely pointer exchange. In figure \ref{fig:SepWorlds} is showed such relation.
+
+\begin{figure}[htb]
+    \centering
+    \includegraphics[scale=1]{Both}
+    \caption{On the left the normal one-to-one relation between DOM implementation and JavaScript representation; On the right the one-to-many relation caused by running content scripts in isolated worlds. Figure taken from \cite{ChromeExtSpec}}
+    \label{fig:SepWorlds}
+\end{figure}
 
 In order to keep functionality of extensions, communication between content scripts and extension core is done using a message passing interface. The message passing interface has crucial importance in this work since it is the only way for a content script to trigger execution of a privilege. We will discuss it later in \ref{subs:MPI}.
 
 \subsection{Extension core}
 The extension core is the most critical part of the application. It is executed in a unique origin like \texttt{chrome-extension://hcdmlbjlcojpbbinplfgbjodclfijhce} in order to prevent cross origin attacks, but it can communicate with all origins that match with one of the host permission defined in the manifest. In this environment are executed all scripts defined in the background field of the manifest. Since background pages can have remote resources of every kind (even scripts), they can also request to the web such resources, but this can be very dangerous. In fact if the resources are on HTTP connections these can be altered by an attacker. \cite{ChromeExtSpecSnd} describes how to enforce the security policy in order to avoid such possible weakness. Background pages can interact with content scripts via message passing.
-\missingfigure{Maybe figura schema Chrome Extensions comm \& elements.}
+%\missingfigure{Maybe figura schema Chrome Extensions comm \& elements.}
 
 \subsection{Message passing API}
 \label{subs:MPI}
@@ -84,7 +91,7 @@ In table \ref{tab:MPIMessage} we can see how to use the simple message passing i
 Another way to communicate, that is more secure, is using channels as in table \ref{tab:MPIPort}. In the message passing API there is a method called \texttt{connect} that triggers the corresponding event listener \texttt{onConnect} and returns a port. It has as optional arguments the name of the channel that is creating. A port object is a bidirectional channel that can be used to communicate. It contains the methods \texttt{postMessage}, \texttt{disconnect} and the events \texttt{onMessage} and \texttt{onDisconnect}. Communication using ports instead of the classical \texttt{chrome.runtime.sendMessage} is more secure, because only who has one of the port endpoint can communicate. Obviously ports are not serializable, so it is impossible to leak the ownership of a port. Ports provide a guarantee for the sender of the message.
 
 \lstset{language=java,showstringspaces=false}
-\begin{table}[tlb]
+\begin{table}[htb]
 \begin{small}
 \begin{center}
 \begin{tabular}{p{0.45\linewidth} | p{0.45\linewidth}}
@@ -120,7 +127,7 @@ chrome.runtime.onMessage.addListener(onMessage);
 \label{tab:MPIMessage}
 \end{table}
 
-\begin{table}
+\begin{table}[htb]
 \begin{small}
 \begin{center}
 \begin{tabular}{p{0.45\linewidth} | p{0.45\linewidth}}
@@ -156,17 +163,19 @@ chrome.runtime.onConnect.addListener(onConnect)
 \label{tab:MPIPort}
 \end{table}
 
-\section{Bundling example}
+\section{Permission bundling}
 \label{sec:BundlingExample}
-\todo{scriviere molto bene questa parte}
-\todo[inline]{esempio; }
-As seen in table \ref{tab:MPIMessage} the choice taken by a component when a message is received can depend on various factors decided by the programmer.
+Modern privilege-separated architectures mitigates various attacks coming from the external untrusted world, but they still have weakness. A great part of this weakness derive from bad-practice of developers that often are not security experts. One of this is called bundling. Bundling is, as the name suggests, the practice of clustering in the same component different privileges. This can be very dangerous because an attacker that compromise the bundled component can escalate all privileges clustered in it. 
 
-Let us explain the example in \ref{tab:Bundled}: suppose to have three components Background, CS1 and CS2. CS1 can only send messages that has \texttt{"getPasswd"} as title and CS2 only \texttt{"executeXHR"}. Here the Background deduct the sender checking the title of the messages instead of of explicitly checking the argument \texttt{sender}. According to the check decides which privilege has to be executed. This practice is called bundling and is very dangerous because an attacker can compromise just one of the two content scripts and from that one can forge messages with any form escalating a permission that it does not have in the original setting.
+In Chrome extensions sometimes programmers tend to aggregate in a single function various privileges that are delegated to different components. Moreover, often, the bundled function is the \texttt{onMessage} listener in the background, that is the entry point for an attacker that has compromised a content script. The \texttt{onMessage} function is, indeed, critical because it receives  messages from a possible compromised content script, since attacker cannot access directly the background page from the web thanks to the privilege separated and strong isolation behavior of the architecture. The practice of permission bundling, especially in the \texttt{onMessage} function is very dangerous because an attacker that compromises a content script can directly trigger the listener in order to escalate privileges. 
 
-To avoid such weakness is important to check the sender field of the \texttt{onMessage} function in order to be sure of the sender. This cannot be enough because, as discussed before, contents script that are injected on the same page share their memory, tab and origin, and the message passing interface are does not distinguish them. The fix of this weakness is to use ports instead of the \texttt{chrome.runtime.sendMessage} function in order to have different listener for each content script. In table \ref{tab:UnBundled} is showed an unbundled code.
+To reduce the attack surface exposed by bundled components, is important to base the decision of which privilege has to be exercised on trusted elements. Indeed, as seen in table \ref{tab:MPIMessage}, the choice taken by the bundled component when a message is received can depend on various factors decided by the programmer.
 
-\begin{table}[tlb]
+Let us explain the example in \ref{tab:Bundled}: suppose to have three components Background, CS1 and CS2. CS1 can only send messages that has \texttt{"getPasswd"} as title and CS2 only \texttt{"executeXHR"}. Here the Background deduct the sender checking the title of the messages instead of of explicitly checking the argument \texttt{sender}. According to the check decides which privilege has to be executed. This practice exposes all the weakness of the bundling and is very dangerous because an attacker can compromise just one of the two content scripts and from that one can forge messages with any form to escalate a permission that it does not have in the original setting.
+
+To mitigate such weakness, in chrome extensions, is important to check the sender field of the \texttt{onMessage} function in order to be sure of the sender. This cannot be enough because, as discussed before, contents script that are injected on the same page share their memory, tab and origin, and the message passing interface are does not distinguish them. The fix of this weakness is to use ports instead of the \texttt{chrome.runtime.sendMessage} function in order to have different listener for each content script. In this way we unbundle the \texttt{onMessage} function, separating in the various listeners privileges. In table \ref{tab:UnBundled} are showed a not dangerous bundled code, and an unbundled code.
+
+\begin{table}[htb]
 \begin{small}
 \begin{center}
 \begin{tabular}{p{0.95\linewidth}}
@@ -216,7 +225,7 @@ chrome.runtime.sendMessage(mess);
 \caption{Bundled code.}
 \label{tab:Bundled}
 \end{table}
-\begin{table}[tlb]
+\begin{table}[htb]
 \begin{small}
 \begin{center}
 \begin{tabular}{p{0.95\linewidth}}
@@ -271,7 +280,7 @@ port_cs2.onMessage.addListener(onMessage_cs2);
 \end{tabular}
 \end{center}
 \end{small}
-\caption{Two unbundled code.}
+\caption{Unbundling.}
 \label{tab:UnBundled}
 \end{table}
 
@@ -293,8 +302,22 @@ Flow logic, introduced in \cite{FlowLogic}, is a static analysis approach that d
 
 The principal levels of abstraction are grouped in some possible approaches: abstract versus compositional and succinct versus verbose. The abstract style is closer to standard semantics while the compositional one is more syntax directed. The succinct approach is similar to the typical style of type systems because it focuses the top part of the analysis, while the verbose approach traces all the internal information in cashes and are typical of the implementation of control flow analysis and constraint based analysis.
 
-%Usually the formal analysis is done starting an abstract-succinct specification stating when an estimate is acceptable. Such specification is turned in a compositional-verbose analysis and from this is possible to design an algorithm that expresses all acceptability relation of a program in a set of classic logical constraints. Finally the set of constraint, and an abstract representation of the concrete values, are given to a worklist algorithm that computes an acceptable estimate for the program. This is the way followed by our analysis.
+The modularity fits very well for analysis, because the abstract succinct style is very clean and expressive without dealing with implementation details, and from such specification is easy to commute it to a compositional verbose specification. From the latter is possible to build an algorithm for generating the set of constraints of a program and combining it with a simple constraint solver like the worklist algorithm \cite{PrincipleProgramAnalysis} or with a more sophisticated ones like the succinct solver \cite{SuccinctSolver} or the BANSHEE solver \cite{BansheeSolver}, is possible to compute the estimate for a program.
 
-The modularity fits very well for analysis, because the abstract succinct style is very clean and expressive without dealing with implementation details, and from such specification is easy to commute it to a compositional verbose specification. From the latter is possible to build an algorithm for generating the set of constraints of a program and combining it with a simple constraint solver like the worklist algorithm \cite{PrincipleProgramAnalysis} or with a more sophisticated ones like the succinct solver \cite{SuccinctSolver} or the BANSHEE solver \cite{BansheeSolver}, is possible to compute the estimate for a program. \todo{quale dei due?}
+Let us have an example: suppose to have a program and ``magically'' an estimate for it: using flow logic judgments we are able to establish if such estimate respect our analysis for the program, or not. This decision is granted by the fact that one of the constraint of generated by the constraint generator is not satisfied. Moreover we can compute starting from the constraint an estimate that satisfy the analysis.
 
-In this work, indeed, is used the flow logic, and as described before, the various specification-to-implementation steps are done\todo{traballante...}. In chapter \ref{chap:Formalization} is used an abstract-succinct approach, and in chapter \ref{chap:Implementation} the analysis is expanded in the compositional-verbose one; from this the algorithm for constraint-generation is built and finally is used a worklist algorithm to solve the constraints and to find an estimate for a program. 
+In this work, is used the flow logic, and as described before, the various specification-to-implementation steps are done. In chapter \ref{chap:Formalization} is used an abstract-succinct approach, and in chapter \ref{chap:Implementation} the analysis is expanded in the compositional-verbose one; from this the algorithm for constraint-generation is built and finally is used a worklist algorithm to solve the constraints and to find an estimate for a program.
+
+\section{Lambda JS}
+Since JavaScript is a real world programming language that has high level constructs, weak and dynamic typing discipline and unconventional semantics, it is very complex to analyze. We reduce JavaScript to \ljs\ as described in \cite{LambdaJS}. \ljs\ is a dialect of Scheme, with a small-step operational semantics, that, in contrast with JavaScript, has few standard constructs taken from the lambda calculus. \ljs\ models features of JavaScript in a way that corresponds closely to well known languages semantics.
+
+Thanks to this we can simplify a lot the analysis without losing expressiveness because \ljs\ contains just few construct with simple semantics.
+
+Unfortunately \ljs\ is not proved to be a sound representation of JavaScript, but all test on desugared file showed that its semantic coincide with JavaScript. In figure \ref{asm:LJS} is shown the testing method adopted to validate semantics of \ljs.
+
+\begin{figure}[htb]
+    \centering
+    \includegraphics[scale=1]{LambdaJS}
+    \caption{The \ljs\ test. Figure taken from \cite{LambdaJS}}
+    \label{fig:LJS}
+\end{figure}

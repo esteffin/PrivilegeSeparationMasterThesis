@@ -1,24 +1,57 @@
-\section{Privilege separation}
-\label{sec:PriviSep}
+In the last few years there has been an increment in the usage of web applications such HTML5 apps and browser extensions. These increment also enhanced the popularity of the JavaScript language used to develop them. Unfortunately, while traditional languages has lots of tools made explicitly to help the programmer in the development and in the process of validating programs, JavaScript has few of them. Indeed, actual tools for JavaScript are limited and their purpose is no more than syntax highlighting and code completion. Moreover there are almost no static analysis tool to check and validate web applications. This lack of analyzer resulted in few controls on the software that must be done by programmers. An other aspect that we have to consider is that usually these programmers are not even security experts. This situation is very dangerous, even because web applications and browser extensions have often to interact with the untrusted outer world and with user sensitive data.
 
-\section{Privilege escalation attacks}
+According to the need of security warranties, in this years various solutions has been adopted in different fields.
+
+\section{Background}
+
+\subsection{Privilege separation}
+\label{sec:PriviSep}
+Privilege separated architectures are built to force developers to split the application in components giving to each only limited permissions. This choice reduces the attack surface of the application, because each component is isolated from the others, and reduces the impact of an attack since a compromised component has only limited privileges. 
+
+To preserve interaction between isolated components, the latter can communicate using a tight message passing interface. Such message passing interface constitutes a relevant attack surface against privilege-separated applications, because it may lead to privilege escalation attacks: a compromised, or malicious component that does not have a permission, can send messages asking other components to trigger security-sensitive operations.
+
+Other interesting features of some privilege separated architectures are:
+\begin{itemize}
+\item permissions are given statically before the execution of the application in order to avoid privilege escalation attacks;
+\item and there is a strict punctual mapping between components and permissions in order to reduce privileges acquired by an attacker.
+\end{itemize}
+
+Privilege separated architectures are adopted in various fields, for example Google Chrome extension frameworks, Android and others.
+
+\subsection{Privilege escalation attacks}
 \label{sec:Escalation}
+An attacker of a privilege separated architecture compromising a component can exercise only certain permissions, and not all the permissions given to the application. But the problem is that he can try to trigger execution of other privileges that the compromised component do not have. To do this he can use the message passing interface asking to another component to exercise high privileges. Let us have an example:
+we have two components A, B. Component A runs with high privileges and receives messages from B; B has instead low privileges and it asks to A to perform security sensitive operations. Assume also that the attacker can only compromise B. Compromising B, the attacker gains low privilege, and so his potentiality are limited. But he can ask to component A to exercise high privileges, and if A agreed, B can indirectly exercise such high privilege defeating the aim of privilege separation. These attacks are very common in various privilege separated architecture and are studied deeply in scientific literature \cite{Lintent, AndroidPrivilegeEscalation}.
 
 \section{Chrome extension architecture overview}
 \label{sec:ExtOverview}
-Chrome by Google, as all actual-days browsers, provides a powerful extension framework. This gives to developers a huge architecture made explicitly to extend the core browser potentiality in order to build small programs that enhance user-experience. In Chrome web store there are lot of extensions with very various behaviors like security enhancers, theme changers, organizers or other utilities, multimedia visualizer, games and others. For example, AdBlock (one of the top downloaded) is an extension made to block all ads on websites; ShareMeNot "protects the user against being tracked from third-party social media buttons while still allowing it to use them"\cite{ShareMeNot}. As we can notice, extensions have different purposes, and many of them has to interact massively with web pages. This creates a very large attack surface for attackers and it is a big threat for the user. Moreover, many extensions are written by developers that are not security experts so, even if their behavior is not malign, the bugs that can appear in them can be easily exploited by attackers.
+Chrome by Google, as all actual-days browsers, provides a powerful extension framework. This gives to developers a huge architecture made explicitly to extend the core browser potentiality in order to build small programs that enhance user-experience. In Chrome web store there are lots of extensions with very various behaviors like security enhancers, theme changers, organizers or other utilities, multimedia visualizer, games and others. For example, we point out AdBlock (one of the top downloaded), an extension made to block all ads on websites and ShareMeNot that ``protects the user against being tracked from third-party social media buttons while still allowing it to use them''\cite{ShareMeNot}. As we can notice, extensions have different purposes, and many of them has to interact massively with web pages. This creates a very large attack surface for attackers and it is a big threat for the user. Moreover, many extensions are written by developers that are not security experts so, even if their behavior is not malign, the bugs that can appear in them can be easily exploited by attackers.
 
-To mitigate this threat, as deeply discussed in \cite{ChromeExtSpec}, the extension framework is built to force programmers to adopt privilege separation, least\todo{aggiustare} privilege and strong isolation. Privilege separation, as explained before in \ref{sec:PriviSep}, forces the developer to split the application in components and it gives a message passing interface to permit the communication among them; least privilege gives to the app the least set of permission needed through the execution of the extension and the strong isolation separate the heaps of the various components of the extension running them in different processes in order to block any possible escalation and direct delegation.
+To mitigate this threat, as deeply discussed in \cite{ChromeExtSpec}, the extension framework is built to force programmers to develop the software using privilege separation, least privilege and strong isolation:
+\begin{enumerate}
+\item Privilege separation, as explained in \ref{sec:PriviSep}, forces the developer to split the application in components and it gives a message passing interface to permit the communication among them; 
+\item least privilege gives to the app the least set of permission needed through the execution of the extension;
+\item the strong isolation separates the heaps of the various components of the extension running them in different processes in order to block any possible escalation and direct delegation.
+\end{enumerate}
 
-More specifically, Google Chrome extension framework \cite{ChromeExtensionOnline} splits the extension in two sets components: content scripts and background pages. The content scripts are injected in every page on which the extension is running using the same origin; they run with no privileges except the one used to send messages to the background and they cannot exchange pointers with the page except to the standard field of the DOM. Background pages, instead, have only one instance for each extension, are totally separated from the opened pages, have the full set of privilege granted at install time and, if it is allowed from the manifest, they can inject new content scripts to pages, but they can communicate with the content scripts only via message passing.
+This reduces the attack surface because while the least privilege sets a static upper bound on the possible permission exercised by the extension, the privilege separated architecture and strong isolation reduce the possible malignant operations performed by the attacker.
 
-%\section{Chrome extension architecture weaknesses}
-%\label{sec:ExtWeakness}
+More specifically, Google Chrome extension framework \cite{ChromeExtensionOnline} splits the extension in two sets components: content scripts and background pages. 
+
+The content scripts are injected in every page on which the extension is running, using the same origin. They run with no privileges except the one used to send messages to the background, and they cannot exchange pointers with the page, except to the standard field of the DOM. 
+
+Background pages have instead only one instance for each extension, are totally separated from the opened pages, have the full set of privilege granted at install time and, if it is allowed from the manifest, they can inject new content scripts to pages. Unfortunately they can communicate with the content scripts only via message passing.
 
 \section{Bundling}
 \label{sec:Bundling}
+Studying some real Chrome extensions we notice that programmers tend to concentrate most of the privileges of the application in a single component. This is dangerous because if the attacker compromises that component, he escalates all privileges of the extension. Moreover Chrome extension permission system gives all permissions to the extension core, and no one to content script, so it is implicitly bundled \cite{PriviSep}. Since the architecture suffers this problem extensions written by programmers that are not security experts sometimes suffer some kind of bugs that are exploitable by the attacker. In section \ref{sec:BundlingExample} we will deeply discuss problems derived by bundling.
 
-\section{Our work} 
+\section{Purposes and methodology} 
 \label{sec:OurWork}
-\todo[inline]{titolare meglio... tipo our work...}
-In this work do a study on Chrome Extensions identifying a possible weakness. We write a calcolus 
+The main aims of this work are to introduce an analysis of JavaScript code of real Chrome extensions, able to find security warranties on it and to build a real tool able to perform such analysis on the source. 
+
+Our work is composed by a first part in which we carried out a deep study of the state-of-the-art about Chrome Extensions framework looking both implementation specific details and scientific works. Then we worked pairwise on the formal analysis and on the implementation of a tool for statically checking an extension. Working together on both aspects of the analysis (formal and practical) helped us because some problems arisen in the proofs of the formal part guided the refinement of both the analysis and the tools. Moreover similarly problems found in the implementation also influenced both analysis.
+
+In chapter \ref{chap:Formalization} we will present a sound analysis that is able to determine which capability an extension leaks in extension in presence of an attacker, according to the power of the attacker. In other words having an extension with some components that exercise some privileges, the analysis shows which privilege an attacker gains if it compromises the different components. In this way we can guarantee that an extension never leaks a privilege to a potential attacker. For better understanding the importance of our finding imagine a bank that wants to develop an extension to enhance user experience and safety of its online banking website. With our analysis the bank can statically know which permission are given to a possible attacker and be sure that an extension never allows the attacker to do a critical task.
+
+We also developed a tool in Microsoft F\# for statically checking real extensions. The tool starts from the analysis of the manifest of the extension, desugar the JavaScript source in the more succinct \ljs (described below), parse the desugared sources and perform the analysis returning the possible pairs attacker permission, escalate permission. Since the analysis is sound, the tool gives an upper bound. So if the tool validate an extension, this will work for sure, otherwise if the tool fails, then the extension may fail.

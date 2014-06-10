@@ -1,4 +1,4 @@
-\newcommand{\ljs}{$\lambda_{JS}$}
+
 This chapter is about the formal part of the work and explains the calculus, the safety property, the analysis specification, theorem and requirements for correctness. It is part of the work done together with Stefano Calzavara.
 %calcolo e proprieta' di sicurezza by Stefano
 
@@ -310,7 +310,6 @@ We discuss some important points: in rule \irule{JS-PrimOp} we assume a $\delta$
 
 \section{Safety despite compromise}
 \label{sec:SafDespComp}
-\todo [inline] {nome sezione!!}
 \begin{definition}[Exercise]
 \label{def:exercise}
 \mbox{ }
@@ -348,7 +347,6 @@ In other words, This crucial definition state that an \emph{initial} system is \
 
 \section{Example}
 \label{sec:Example}
-\todo [inline] {pulire...}
 Consider an extension made of two content scripts $CS1,CS2$ and a background page $B$. Assume that $CS1$ sends only messages with tag \texttt{Message1} and $CS2$ sends only messages with tag \texttt{Message2}.
 
 A simple encoding of the Google Chrome extension in our calculus is the following:
@@ -395,6 +393,7 @@ b:   SEND ---> rho
 \end{verbatim}
 which captures the correct information for a CS1-opponent (i.e., a CS1-opponent can only escalate $\rho$).
 
+\begin{comment}
 \subsection{Message by the opponent.}
 \label{subs:MessByOpp}
 Let us modify a little bit the previous example in order to give to the attacker a greater power on the compromised component:
@@ -413,6 +412,7 @@ Background:
 \end{lstlisting}
 \end{small}
 In this scenario cs1 store the message to be sent in a reference. This, without the attacker do not change the behavior of the system, but an attacker having permission \texttt{CS1} $\not\sqsubseteq$ \texttt{SEND} that compromises cs1, is able to alter the content of the message. In this case the message field \texttt{tag} can contains any value, so the attacker is able to escalate $\rho \join \rho'$.
+\end{comment}
 
 \section{Analysis}
 \label{sec:Analysis}
@@ -768,7 +768,7 @@ Let $s = \mu;h;\emptyset$. If $\absC \Vdash s \despite \rho$, then $s$ is $\rho'
 \end{theorem}
 In other words, given $\rho$ (permission of the attacker), is possible to compute an acceptable estimate of the system $\despite \rho$ (behavior of the system with the opponent into). And from such estimate, is possible to predict an upper bound of all permissions that such $\rho$ opponent can escalate.
 
-In section \ref{sec:Example} we showed how an opponent that compromises cs1 was able to escalate only permission $\rho$ because $\permsleak{\rho}(\absC) = \rho$, while in the second example \ref{subs:MessByOpp} the opponent was able to escalate up to $\rho \join \rho'$ because $\permsleak{\rho}(\absC) = \rho \join \rho'$.
+In section \ref{sec:Example} we showed how an opponent that compromises cs1 was able to escalate only permission $\rho$ because $\permsleak{\rho}(\absC) = \rho$, while an opponent with permission \texttt{SEND} was able to escalate up to $\rho \join \rho'$ because $\permsleak{{SEND}}(\absC) = \rho \join \rho'$.
 
 The importance of this theorem is showed by the fact that given an real Chrome extension, with this theorem and the analysis, we are able to show all possible privileges that an attacker can escalate to. This is very important because we can prove that a certain extension exposes to the attacker only certain permissions, protecting the other.
 

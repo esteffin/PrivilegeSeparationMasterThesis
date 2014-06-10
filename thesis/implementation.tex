@@ -10,7 +10,7 @@ Finally analyzing the estimate we show the permission that an attacker can escal
 \label{sec:AnalysisSpec}
 As explained in section \ref{sec:FlowLogic} the flow logic can be done using various approaches. In the analysis of section \ref{sec:Analysis} it is used an abstract succinct approach, but for the implementation of the analysis it is needed a compositional verbose one. The difference between abstract and compositional approach are that the former is closer to the semantic and tend to be simpler, while the latter is more syntax directed. Moreover the abstract approach lets the analysis of lambdas in the application point, while the other analyze it at definition point. The function call in the compositional approach just link the arguments to the formal parameters of the lambda, and links the result of the lambda to the value of the call node.
 
-The differences between a succinct and a verbose analysis are that the succinct analysis focus on the top-level part of the analysis estimate, while the verbose, as in data flow analysis and constraint based analysis, reports all the internal flow data. This second approach is done using caches that holds the analysis informations. 
+The differences between a succinct and a verbose analysis are that the succinct analysis focus on the top-level part of the analysis estimate, while the verbose, as in data flow analysis and constraint based analysis, reports all the internal flow data. This second approach is done using caches that holds the analysis informations.
 
 In the following sections we translate the analysis of section \ref{sec:Analysis} to a compositional verbose one and then we transform the judgments to a set of constraints.
 
@@ -132,7 +132,14 @@ In the following sections we translate the analysis of section \ref{sec:Analysis
 \newcommand{\lbt}[1]{{e_#1}^{\alpha_#1}}
 
 \subsection{Compositional Verbose}
-In compositional verbose approach we add an unambiguous label $\all$ to all expression in the syntax and the result of each expression are stored in an abstract cache $\hat{C}$ that its a map from nodes to abstract values. Even the permissions of each expression are stored in caches $\hat{P}$.
+In compositional verbose approach we add an unambiguous label $\all \in A$ to all expression in the syntax and the result of each expression are stored in an abstract cache $\hat{C}$ that its a map from nodes to abstract values. Even the permissions of each expression are stored in caches $\hat{P}$.
+
+A labeled expression is $e^\all$ has the following property:
+\begin{align*}
+\text{Let be}\ e^\all \ \text{and}\ e'^{\all'} \ \text{two expressions:}\\
+\all = \all' \qquad\text{iff}\ e = e'\\
+\end{align*}
+This property says that two different labeled expression has different labels.
 
 To enhance readability we let $\absCV = \hat{C}, \hat{P}, \hat{\Gamma}, \hat{\mu},  \abstack, \absnet$ to be the the compositional verbose environment that is a six-tuple made of the following components:
 \[
@@ -293,12 +300,11 @@ c & ::= &\{\vat\} & \sqsubseteq & \El & \mathit{Term\ inclusion}\\
 We notice that there are no constraint specific for the three record operations $\widehat{Get}$, $\widehat{Set}$, $\widehat{Del}$, because we treat them as standard operations.
 The main forms of constraints are:
 \begin{itemize}
-\item $\{\true\} \sqsubseteq \Cel(\all) $ that means that $\true$ must be in the possible estimate of the node marked with $\all$;
-\item $\{\undef\} \sqsubseteq \Rel(x) $ that means that $\undef$ must be in the possible estimate of the $x$ variable;
+\item $\vat \sqsubseteq \Cel(\all) $ that means that $\vat$ must be in the possible estimate of the node marked with $\all$ (e.g., $\{\true\}\sqsubseteq \Cel(\all)$ means that $\true$ is in the possible estimate of the node marked with $\all$);
+\item $\vat \sqsubseteq \Rel(x) $ that means that $\vat$ must be in the possible estimate of the $x$ variable;
 \item $\Cel(\all_1) \sqsubseteq \Cel(\all) $  that means that the estimate of node $\all_1$ must be contained in the node $\all$ (as before the same are with the variables);
-\item $\widehat{Op}_+(\Cel(\all_1), \Cel(\all_2))\sqsubseteq \Cel(\all)$  that means that the result of the abstract operation corresponding to $+$ with $\Cel(\all_1)$ and $\Cel(\all_2)$ as arguments must be contained in the estimate of $\Cel(\all)$;
-\item $\{\true\}\sqsubseteq \Cel(\all_0) \Rightarrow \Cel(\all_1) \sqsubseteq \Cel(\all)$ that means that the fact that $\true$ is contained in the estimate of $\Cel(\all_0)$ implies that the value of $\Cel(\all_1)$ must be contained in the estimate of the node $\Cel(\all)$ (this form is used in the if construct);
-\item $\{\lam {x} {\lbt 0}\}\sqsubseteq \Cel(\all_1) \Rightarrow \Cel(\all_0) \sqsubseteq \Cel(\all)$ that means that the fact that $\lam {x} {\lbt 0}$ is contained in the estimate of $\Cel(\all_1)$ implies that the value of the lambda (contained in $\Cel(\all_0)$) must be contained in the estimate of the node $\all$ (this form is used in the application);
+\item $\widehat{Op}(\vec{\Cel(\all_i)})\sqsubseteq \Cel(\all)$  that means that the result of the abstract operation with $\vec{\Cel(\all_i)}$ as arguments must be contained in the estimate of $\Cel(\all)$ (e.g., $\widehat{Op}(\Cel(\all_1), \Cel(\all_2))\sqsubseteq \Cel(\all)$ means that the result of the abstract operation corresponding to $+$ with $\Cel(\all_1)$ and $\Cel(\all_2)$ as arguments must be contained in the estimate of $\Cel(\all)$);
+\item $\vat \sqsubseteq \Cel(\all_0) \Rightarrow \Cel(\all_1) \sqsubseteq \Cel(\all)$ means that the fact that $\vat$ is contained in $\Cel(\all_0)$ implies that value in $\Cel(\all_1)$ must be contained in the estimate of the node $\Cel(\all)$ . For example, $\{\true\}\sqsubseteq \Cel(\all_0) \Rightarrow \Cel(\all_1) \sqsubseteq \Cel(\all)$ means that if $\true$ is contained in the estimate of $\Cel(\all_0)$ than the value of $\Cel(\all_1)$ must be contained in the estimate of the node $\Cel(\all)$ (this form is used in the if construct); and $\{\lam {x} {\lbt 0}\}\sqsubseteq \Cel(\all_1) \Rightarrow \Cel(\all_0) \sqsubseteq \Cel(\all)$ that means that if $\lam {x} {\lbt 0}$ is contained in the estimate of $\Cel(\all_1)$ then the value of the lambda (contained in $\Cel(\all_0)$) must be contained in the estimate of the node $\all$ (this form is used in the application);
 \end{itemize}
 
 In order to transform the $\forall$ construct of the compositional rules in our constraints (e.g., in the app expression or in the \texttt{deref} expression), since both lambdas and references are finite sets in the program, we generate one implication constraint for each element in the program in this way: let be $Ref_*$ the set of all reference labels of the program $\forall \ell \in v_1: \muat(\ell, \rho_s) \sqsubseteq \Cat(\all)$ is transformed in the set $\braces{\ell \in \Cel(\all_1) \Rightarrow \Mel(\ell, \rho_s) \sqsubseteq \Cel(\all) | \ell \in Ref_*}$.
@@ -336,7 +342,6 @@ As simple example the program $(((\lam {x} {x^{1}})^{2} (\lam {y} {False^{3}})^{
 \}
 \end{array}
 \]
-\todo{expand?}
 
 \begin{table}[htb]
 \begin{tabular}{l l l l}
@@ -556,26 +561,27 @@ propagate q d =
 
 \section{Abstract domains choice}
 \label{sec:AbstractDomChoice}
-In this section we introduce all abstract domains used in the analysis. In this purpose we used the classical approach of abstract interpretations of \cite{StringAbstraction, PrincipleProgramAnalysis}. We will even show how our choice respect the assumption made in section \ref{sec:CorrectnesReqs}.
+In this section we introduce all abstract domains used in the analysis. In this purpose we used the classical approach of abstract interpretations of \cite{StringAbstraction, PrincipleProgramAnalysis}. %We will even show how our choice respect the assumption made in section \ref{sec:CorrectnesReqs}.
 
 \subsection{Abstract Value}
 In the implementation of the analysis an abstract value is a set containing the abstraction of each atomic domain defined in the calculus in section \ref{sec:Calculus}.
 
 \begin{definition}[Partial order on abstract values]
+\label{def:PartOrdVal}
 Given two abstract values $\vat, \vat'$ we say that $\vat \sqsubseteq \vat'$ if $\forall \hat {u} \in \vat :\exists \hat{u'} \mid \hat{u} \sqsubseteq \hat{u'}$
 \end{definition}
 This means that abstract values are partially ordered according with prevalues of which they are composed.
 
-In the following part we define all the domain abstractions.
+In the definition \ref{def:PartOrdVal} we assumed a pre-order relation on abstract pre-values. In the following part we introduce all abstract pre-values domains, and so even the pre-order relation used here.
 
 \subsubsection{Finite domains}
 As required in \ref{asm:finite} the abstraction of finite domains coincide with their concrete themselves. So, both abstraction and concretization function are just the identity function. We use this abstraction for boolean ($\true, \false$) and $\undef$ and $\unit$. The pre-order relation in this case is the simple $\subseteq$ between abstract values.
 
 \subsubsection{Lambdas}
-Since all lambdas of a program are a finite set, we abstract as finite domains.
+Since all lambdas defined in a program are a finite set, their abstraction coincide with their concrete representation. So, as finite domains, the abstraction and the concretization function, are the identity function. Again the partial order relation in this case is the simple $\subseteq$ relation between abstract value.
 
 \subsubsection{References}
-Since labels $\ell$ associated to references are finite (the count is the number of $\newref \ell e$ expressions) we abstract as finite domains.
+Since labels $\ell$ associated to references are finite (the count is the number of $\newref \ell e$ expressions) we abstract as finite domains and lambdas. Even in this case the partial order relation between references is the $\subseteq$ relation between abstract values.
 
 \subsubsection{Numbers}
 Numbers are abstracted with sign domain as in \cite{PrincipleProgramAnalysis} with this abstraction function:
@@ -628,7 +634,15 @@ To collect more information on records we state the $\join$ as the union of the 
 
 \subsection{Abstract operations} %- specifica delle operazioni astratte
 \label{sec:AbstractOp}
-In this section we present the main abstract operations of the abstract domains.
+All operations on abstract values are just operations on the Cartesian product on each component. For example the abstract plus operation $\hat{+}(\vat_1, \vat_2)$ is the $\hat{+}$ on each element of $\vat_1$ and $\vat_2$ such that they are numbers.
+\begin{align*}
+\hat{+}(\vat_1, \vat_2) = \bigsqcup(\hat{+}(\hat{u_1}, \hat{u_2} \mid \hat{u_1} \in numbers(\vat_1) \wedge \hat{u_2} \in numbers(\vat_2)))
+\end{align*}
+Where numbers is a function that returns the set of all abstract numbers in an abstract value.
+
+This example show how abstract operations are total as assumed in \ref{asm:totality-abs}, indeed, if one of the two arguments $\vat_1, \vat_2$ does not contains any abstract number, the operation returns $\bot$ that is a valid abstract value. The same are with other operations.
+
+In this section we present the main abstract operations of the abstract pre-value domains.
 
 \subsubsection{Numbers}
 The arithmetic operation on sign domain are the following:
@@ -733,4 +747,16 @@ Del operation removes a field from an object. Its abstract representation has to
 
 \section{Implementation-specific details}
 \label{sec:ImplSpecDetails}
-In our implementation we had to deal with specific problems. One of them were about abstract records because since the program is able to add or modify at run-time both field and values of a record, we had to change the representationof it. Indeed, records cannot contain values because the constraint o
+As stated before our tool, written in F\# implements the analysis of \ref{chap:Formalization} for a real chrome extension, and is able to detect which privileges ca be obtained by an attacker that infect a content script.
+
+In order to analyze the JavaScript code we desugar the JavaScript code \ljs\ using the desugarer prototype. This tool is written in Haskell and described in \cite{LambdaJS}. It also include in the desugared file a prelude containing JavaScript standard API (e.g., Arrays) and non standard operation of it.
+
+Then we parse the desugared \ljs\ using a \texttt{yacc} parser.
+
+Since we are using the 0-CFA approach for the analysis, we do not have any context, so to enhance the precision of the analysis (soundness is kept) we alpha-rename the bound variables (all because a desugared file is closed) in order to distinguish them through the analysis. We also mark the nodes of the abstract syntax tree with unambiguous labels $\all \in A$ and we annotate all references with $\ell$. 
+
+Then the abstract syntax tree representing the program is passed to the algorithm that generates the constraints producing a set of constraints.
+
+Finally, given an abstract value representation, the constraint are resolved using the worklist algorithm and producing an acceptable estimate for the initial program.
+
+Finally we analyze the estimate and we show the permission that an attacker can escalate if it infect a content script.
