@@ -9,6 +9,7 @@
 \usepackage{graphicx}
 \usepackage{listings}
 \usepackage{todonotes}
+\usepackage{lmodern}
 \author{Enrico Steffinlongo}
 \title{Privilege separation in browser architectures}
 \institute[Universities Here and There] % (optional)
@@ -17,14 +18,13 @@
 }
 %\date{}
 
+
 %\setbeamercovered{transparent} 
 \setbeamertemplate{navigation symbols}{} 
 %\logo{} 
 %\institute{} 
 %\date{} 
 %\subject{} 
-
-\newcommand{\ljs}{$\lambda_{JS}$}
 
 \defbeamertemplate*{footline}{shadow theme}
 {%
@@ -38,12 +38,17 @@
   \vskip0pt%
 }
 
+\input{../macros}
 
 \begin{document}
 
 \begin{frame}
 \titlepage
 \end{frame}
+
+%\begin{frame}
+%\listoftodos
+%\end{frame}
 
 \begin{frame}
 \tableofcontents
@@ -80,66 +85,199 @@ Potential security problem!
 
 \subsection{Chrome Extension}
 \begin{frame}{Chrome extensions architecture}
-Chrome extension architecture force developer to three practices
+A chrome extension is composed by
+\begin{itemize}
+\item A manifest: the file containing all 
+\item A set of Content scripts
+\item An Extension Core (composed by a set of scripts)
+\item Other resources
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Chrome extensions architecture}
+\begin{columns}[T]
+\begin{column}{.48\textwidth}
+Chrome extension architecture force developers to three practices
 \begin{enumerate}
 \item Privilege separation
 \item Least privilege
 \item Strong isolation
 \end{enumerate}
-This reduces attack surface
+\end{column}%
+\begin{column}{.48\textwidth}
+\includegraphics[scale=0.25]{Images/StrongIsolation.png}
+\end{column}%
+\end{columns}
 \end{frame}
 
 \begin{frame}{Privilege separation}
-
+\begin{itemize}
+\item Content scripts
+\begin{itemize}
+\item Injected to each page (multiple instances)
+\item Access the DOM of the page
+\item Cannot use privileges other than the one used to send messages to the Extension Core
+\end{itemize}
+\item Extension Core
+\begin{itemize}
+\item Single instance for each browser session
+\item No access to DOM of pages
+\item Can use privileges defined statically in the manifest
+\end{itemize}
+\end{itemize}
 \end{frame}
 
 \begin{frame}{Least privilege}
-
+An extension has a limited set of permission defined statically in the manifest
+\begin{itemize}
+\item An extension cannot use more than required permissions
+\item User have to agree with the required permission at install time
+\item Attacker cannot use more than such set of privileges
+\end{itemize}
 \end{frame}
 
 \begin{frame}{Strong isolation}
-
+\begin{itemize}
+\item Extension core is sandboxed in a process separated from the content scripts with unique origin
+\item Communication between Extension Core and Content Scripts is only via message passing
+\item Messages exchanged can only be string (Objects are marshaled using a JSON serializer without functions)
+\item Content script are executed in a isolated world from web pages
+\end{itemize}
 \end{frame}
 
-\begin{frame}{Extension Manifest}
-
-\end{frame}
-
-\begin{frame}{Content scripts}
-
+\begin{frame}{Isolated worlds}
+\begin{columns}[T]
+\begin{column}{.62\textwidth}
+\begin{itemize}
+\item Content script and web pages has different memory spaces
+\item Only standard DOM fields are shared
+\end{itemize}
+A potentially malign web page cannot:
+\begin{itemize}
+\item alter the content of variables of the content script
+\item invoke or share function with the content script
+\end{itemize}
+\end{column}%
+\begin{column}{.33\textwidth}
+\includegraphics[scale=0.28]{Images/IsolatedWorlds.png}
+\end{column}%
+\end{columns}
 \end{frame}
 
 \begin{frame}{Message passing}
-
+\todo[inline]{to be fixed MPI}
+Chrome extension message passing API
 \end{frame}
 
 \begin{frame}{Bundling}
+Extensions are often made by developer that are not security experts.
+\todo[inline]{to be fixed Bundle}
+Developer tends to manage incoming messages in a centralized way. This is dangerous because 
 
 \end{frame}
 
-\begin{frame}{Example}
+\begin{frame}[fragile]{Example}
+\todo[inline]{to be fixed Example}
+\begin{columns}[T]
+\begin{column}{.48\textwidth}
 
+\end{column}
+\begin{column}{.48\textwidth}
+\begin{tiny}
+\begin{lstlisting}
+chrome.runtime.onMessage.addListener(
+  function (msg, sender, sendResp) {
+    if (msg.tag == "req") {
+      var u = DB.getUser(msg.site);
+      var p = DB.getPwd(msg.site);
+      sendResp({"user": u, "pwd": p});
+    }
+    else if (msg.tag == "sync") {
+      var db = DB.serialize();
+      xmlhttp.open("GET", msg.site + db);
+      xmlhttp.send();
+    }
+    else
+      console.log ("Invalid message");
+});
+\end{lstlisting}
+\end{tiny}
+\end{column}
+\end{columns}
 \end{frame}
 
 \section{Our work---}
 \subsection{Analysis}
-\begin{frame}{LambdaJS}
+\begin{frame}{LambdaJS \cite{LambdaJS}}
+\begin{columns}[T]
+\begin{column}{.48\textwidth}
+JavaScript:
+\begin{itemize}
+\item Complex language
+\item Lots of constructs
+\item unconventional semantics.
+\end{itemize}
+Very complex to analyze.
+\end{column}
+\begin{column}{.50\textwidth}
+\includegraphics[scale=0.42]{Images/LambdaJS.PNG}
+\end{column}
+\end{columns}
 
+\ljs\cite{LambdaJS} is a core calculus made by Brown university designed specifically to ``desugar'' JavaScript
+\begin{itemize}
+\item Few constructs
+\item Standard $\lambda$-style semantics
+\item Not a sound approximation of JavaScript
+\item Tests on ``desugared'' files shows that its the semantic coincide with JavaScript
+\end{itemize}
+Easy to analyze
 \end{frame}
 
 \begin{frame}{The calculus}
+\ljs++ is an extension of \ljs\ with security oriented constructs. Its components are:
 
+\begin{itemize}
+\item Constants: \begin{tiny}$c ::= \mathit{num} ~|~ \mathit{str} ~|~ \mathit{bool} ~|~ \unit ~|~ \undef$\end{tiny}
+\item Values: \begin{tiny}$v ::= n ~|~ x ~|~ c ~|~ r_{\ell} ~|~ \lam{x}{e} ~|~ \rec{\vec{str_i:v_i}}$\end{tiny}
+\item Expressions: \begin{tiny}$
+\begin{array}{lcl}
+e & ::= & v ~|~ \letexpr{x}{e}{e} ~|~ \appl{e}{e} ~|~ \op(\vec{e_i}) ~|~ \while{e}{e} \\
+& | & \cond{e}{e}{e} ~|~  e;e ~|~ \lookup{e}{e} ~|~ \store{e}{e}{e} \\
+& | & \delete{e}{e} ~|~ \newref{\ell}{e} ~|~ \deref{e} ~|~ \setref{e}{e} \\
+& | & \send{e}{e}{\rho} ~|~ \exercise{\rho}.
+\end{array}
+$\end{tiny}
+\item Memories: \begin{tiny}$\mu ::= \emptyset ~|~ \mu, \map{r_{\ell}}{\rho}{v}$\end{tiny}
+\item Handlers: \begin{tiny}$h ::= \emptyset ~|~ h,\handler{a}{x}{\rho}{e}{\rho'}$\end{tiny}
+\item Instances: \begin{tiny}$i ::= \emptyset ~|~ i,\inst{a}{e}{\rho}$\end{tiny}
+\item System: \begin{tiny}$s = \sys{\mu}{h}{i}$\end{tiny}
+\end{itemize}
 \end{frame}
 
 \begin{frame}{Judgments}
-
+For the analysis we used Flow logic \cite{FlowLogic}
 \end{frame}
 
 \begin{frame}{Theorem}
-
+Let $s = \mu;h;\emptyset$. If $\absC \Vdash s \despite \rho$, then $s$ is $\permsleak{\rho}(\absC)$-safe despite $\rho$.
 \end{frame}
 
 \subsection{Implementation}
+
+\begin{frame}{Tool}
+We developed a tool in F\# to perform the analysis described below. We:
+\begin{enumerate}
+\item add the chrome API definition as prelude to each source
+\item desugar the source with prelude using the desugaring tool \cite{LambdaJS}
+\item parse the desugared file using a YACC lexer/parser
+\item alpha-rename all variables to avoid clashing since the analysis is context-insensitive
+\item add unambiguous labels $\alpha$ on nodes in the AST ($e \Rightarrow e^\alpha$)
+\item generate the constraints for the AST
+\item solve the constraints using a worklist algorithm
+\item interpret the solution.
+\end{enumerate}
+\end{frame}
 
 \begin{frame}{Compositional verbose}
 
@@ -196,6 +334,13 @@ adsad3
 \begin{center}
 {\Large \textbf{Thank you!}}
 \end{center}
+\end{frame}
+
+\begin{frame}{References}
+\begin{tiny}
+\bibliographystyle{plain}
+\bibliography{../bibliography}
+\end{tiny}
 \end{frame}
 
 \end{document}
