@@ -11,6 +11,12 @@
 \usepackage{todonotes}
 \author{Enrico Steffinlongo}
 \title{Privilege separation in browser architectures}
+\institute[Universities Here and There] % (optional)
+{
+  Università Ca' Foscari - Computer science
+}
+%\date{}
+
 %\setbeamercovered{transparent} 
 \setbeamertemplate{navigation symbols}{} 
 %\logo{} 
@@ -18,17 +24,19 @@
 %\date{} 
 %\subject{} 
 
-%\defbeamertemplate*{footline}{shadow theme}
-%{%
-%  \leavevmode%
-%  \hbox{\begin{beamercolorbox}[wd=.5\paperwidth,ht=2.5ex,dp=1.125ex,leftskip=.3cm plus1fil,rightskip=.3cm]{author in head/foot}%
-%    \hfill\insertshortauthor
-%  \end{beamercolorbox}%
-%  \begin{beamercolorbox}[wd=.5\paperwidth,ht=2.5ex,dp=1.125ex,leftskip=.3cm,rightskip=.3cm plus1fil]{title in head/foot}%
-%    \usebeamerfont{title in head/foot}\insertshorttitle\hfill\insertframenumber\,/\,\inserttotalframenumber%
-%  \end{beamercolorbox}}%
-%  \vskip0pt%
-%}
+\newcommand{\ljs}{$\lambda_{JS}$}
+
+\defbeamertemplate*{footline}{shadow theme}
+{%
+  \leavevmode%
+  \hbox{\begin{beamercolorbox}[wd=.5\paperwidth,ht=2.5ex,dp=1.125ex,leftskip=.3cm plus1fil,rightskip=.3cm]{author in head/foot}%
+    \hfill\insertshortauthor
+  \end{beamercolorbox}%
+  \begin{beamercolorbox}[wd=.5\paperwidth,ht=2.5ex,dp=1.125ex,leftskip=.3cm,rightskip=.3cm plus1fil]{title in head/foot}%
+    \usebeamerfont{title in head/foot}\insertshorttitle\hfill\insertframenumber\,/\,\inserttotalframenumber%
+  \end{beamercolorbox}}%
+  \vskip0pt%
+}
 
 
 \begin{document}
@@ -42,23 +50,152 @@
 \end{frame}
 
 \section{Intro}
-\subsection{Polok}
-\begin{frame}{Fst}
-adsad 
-$$\bot$$
-\end{frame}
-\subsection{Poffo}
-\begin{frame}{Fst}
-adsad2
-\todo[inline]{Hy man}
+%\subsection{Browser extensions}
+\begin{frame}{Browser Extensions}
+Web browsers extensions are phenomenally popular.
+\begin{itemize}
+\item roughly 33\% of Firefox users have at least one add-on
+\end{itemize}
+Extension customize the user experience
+\begin{itemize}
+\item Customize the user interface
+\item Adds lots of functionality to the browser (e.g., save and restore tabs)
+\item Protect users from certain contents of the web pages 
+\end{itemize}
 \end{frame}
 
-\section{Pippo}
+\begin{frame}{Browser Extensions}
+Extension need to interact with
+\begin{itemize}
+\item Web pages DOM
+\item Browser internal structure (tabs collections, \dots)
+\item Browser API (browser storage, cookie jar, \dots)
+\end{itemize}
+Potential security problem!
+\begin{itemize}
+\item Browser API $\Rightarrow$ security critical operations\\
+\item Web interaction $\Rightarrow$ Untrusted and potentially malicious\\
+\end{itemize}
+\end{frame}
+
+\subsection{Chrome Extension}
+\begin{frame}{Chrome extensions architecture}
+Chrome extension architecture force developer to three practices
+\begin{enumerate}
+\item Privilege separation
+\item Least privilege
+\item Strong isolation
+\end{enumerate}
+This reduces attack surface
+\end{frame}
+
+\begin{frame}{Privilege separation}
+
+\end{frame}
+
+\begin{frame}{Least privilege}
+
+\end{frame}
+
+\begin{frame}{Strong isolation}
+
+\end{frame}
+
+\begin{frame}{Extension Manifest}
+
+\end{frame}
+
+\begin{frame}{Content scripts}
+
+\end{frame}
+
+\begin{frame}{Message passing}
+
+\end{frame}
+
+\begin{frame}{Bundling}
+
+\end{frame}
+
+\begin{frame}{Example}
+
+\end{frame}
+
+\section{Our work---}
+\subsection{Analysis}
+\begin{frame}{LambdaJS}
+
+\end{frame}
+
+\begin{frame}{The calculus}
+
+\end{frame}
+
+\begin{frame}{Judgments}
+
+\end{frame}
+
+\begin{frame}{Theorem}
+
+\end{frame}
+
+\subsection{Implementation}
+
+\begin{frame}{Compositional verbose}
+
+\end{frame}
+
+\begin{frame}{Constraint definition}
+
+\end{frame}
+
+\begin{frame}{Constraint generation}
+
+\end{frame}
+
+\begin{frame}{Worklist algorithm}
+
+\end{frame}
+
+\begin{frame}{Abstract domains}
+
+\end{frame}
+
+\section{Conclusion}
+\begin{frame}{Results}
+
+\end{frame}
+
+\begin{frame}{Performance}
+
+\end{frame}
+
+
 \begin{frame}[fragile]{Fst}
 \begin{lstlisting}
 a bunch of JavaScript code !_*(){}[]
 \end{lstlisting}
 adsad3
+\end{frame}
+
+\subsection{Future works}
+\begin{frame}{Future works}
+\begin{itemize}
+\item Automatic correction of bundled extensions in order to debundle itself preserving its functionality
+\item Generalization of the analysis in order to check other similar architectures (e.g., Firefox)
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\begin{center}
+{\Large \textbf{Questions?}}
+\end{center}
+\end{frame}
+
+\begin{frame}
+\begin{center}
+{\Large \textbf{Thank you!}}
+\end{center}
 \end{frame}
 
 \end{document}
