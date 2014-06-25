@@ -10,6 +10,8 @@
 \usepackage{listings}
 \usepackage{todonotes}
 \usepackage{lmodern}
+\usepackage{infer}
+
 \author{Enrico Steffinlongo}
 \title{Privilege separation in browser architectures}
 \institute[Universities Here and There] % (optional)
@@ -54,8 +56,8 @@
 \tableofcontents
 \end{frame}
 
-\section{Intro}
-%\subsection{Browser extensions}
+%\section{Intro}
+%%\subsection{Browser extensions}
 \begin{frame}{Browser Extensions}
 Web browsers extensions are phenomenally popular.
 \begin{itemize}
@@ -83,16 +85,7 @@ Potential security problem!
 \end{itemize}
 \end{frame}
 
-\subsection{Chrome Extension}
-\begin{frame}{Chrome extensions architecture}
-A chrome extension is composed by
-\begin{itemize}
-\item A manifest: the file containing all 
-\item A set of Content scripts
-\item An Extension Core (composed by a set of scripts)
-\item Other resources
-\end{itemize}
-\end{frame}
+%\subsection{Chrome Extension}
 
 \begin{frame}{Chrome extensions architecture}
 \begin{columns}[T]
@@ -137,43 +130,41 @@ An extension has a limited set of permission defined statically in the manifest
 \end{frame}
 
 \begin{frame}{Strong isolation}
+All components of the extension have different address spaces except content scripts that can read and modify the DOM of the page on which are injected. So an infected component could not
 \begin{itemize}
-\item Extension core is sandboxed in a process separated from the content scripts with unique origin
-\item Communication between Extension Core and Content Scripts is only via message passing
-\item Messages exchanged can only be string (Objects are marshaled using a JSON serializer without functions)
-\item Content script are executed in a isolated world from web pages
+\item alter content of variables of other components
+\item invoke or alter functions defined in other components.
+\end{itemize}
+
+Communication between Extension Core and Content Scripts is only via message passing:
+\begin{itemize}
+\item Messages exchanged can only be string (Objects are marshaled using a JSON serializer)
+\item Functions cannot be sent.
 \end{itemize}
 \end{frame}
 
-\begin{frame}{Isolated worlds}
-\begin{columns}[T]
-\begin{column}{.62\textwidth}
-\begin{itemize}
-\item Content script and web pages has different memory spaces
-\item Only standard DOM fields are shared
-\end{itemize}
-A potentially malign web page cannot:
-\begin{itemize}
-\item alter the content of variables of the content script
-\item invoke or share function with the content script
-\end{itemize}
-\end{column}%
-\begin{column}{.33\textwidth}
-\includegraphics[scale=0.28]{Images/IsolatedWorlds.png}
-\end{column}%
-\end{columns}
-\end{frame}
+%\begin{frame}{Isolated worlds}
+%\begin{columns}[T]
+%\begin{column}{.62\textwidth}
+%\begin{itemize}
+%\item Content script and web pages has different memory spaces
+%\item Only standard DOM fields are shared
+%\end{itemize}
+%A potentially malign web page cannot:
+%\begin{itemize}
+%\item alter the content of variables of the content script
+%\item invoke or share function with the content script
+%\end{itemize}
+%\end{column}%
+%\begin{column}{.33\textwidth}
+%\includegraphics[scale=0.28]{Images/IsolatedWorlds.png}
+%\end{column}%
+%\end{columns}
+%\end{frame}
 
 \begin{frame}{Message passing}
 \todo[inline]{to be fixed MPI}
 Chrome extension message passing API
-\end{frame}
-
-\begin{frame}{Bundling}
-Extensions are often made by developer that are not security experts.
-\todo[inline]{to be fixed Bundle}
-Developer tends to manage incoming messages in a centralized way. This is dangerous because 
-
 \end{frame}
 
 \begin{frame}[fragile]{Example}
@@ -206,9 +197,8 @@ chrome.runtime.onMessage.addListener(
 \end{columns}
 \end{frame}
 
-\section{Our work---}
-\subsection{Analysis}
-\begin{frame}{LambdaJS \cite{LambdaJS}}
+
+\begin{frame}{LambdaJS (Brown university\cite{LambdaJS})}
 \begin{columns}[T]
 \begin{column}{.48\textwidth}
 JavaScript:
@@ -217,12 +207,12 @@ JavaScript:
 \item Lots of constructs
 \item unconventional semantics.
 \end{itemize}
-Very complex to analyze.
+Very complex to analyze!!
 \end{column}
 \begin{column}{.50\textwidth}
 \includegraphics[scale=0.42]{Images/LambdaJS.PNG}
 \end{column}
-\end{columns}
+\end{columns}\vspace{0.5cm}
 
 \ljs\cite{LambdaJS} is a core calculus made by Brown university designed specifically to ``desugar'' JavaScript
 \begin{itemize}
@@ -235,35 +225,79 @@ Easy to analyze
 \end{frame}
 
 \begin{frame}{The calculus}
-\ljs++ is an extension of \ljs\ with security oriented constructs. Its components are:
+\ljs++ is an extension of \ljs\ with constructs specific for communications of components in privilege-separated architectures. Its components are:
 
 \begin{itemize}
-\item Constants: \begin{tiny}$c ::= \mathit{num} ~|~ \mathit{str} ~|~ \mathit{bool} ~|~ \unit ~|~ \undef$\end{tiny}
-\item Values: \begin{tiny}$v ::= n ~|~ x ~|~ c ~|~ r_{\ell} ~|~ \lam{x}{e} ~|~ \rec{\vec{str_i:v_i}}$\end{tiny}
-\item Expressions: \begin{tiny}$
-\begin{array}{lcl}
-e & ::= & v ~|~ \letexpr{x}{e}{e} ~|~ \appl{e}{e} ~|~ \op(\vec{e_i}) ~|~ \while{e}{e} \\
-& | & \cond{e}{e}{e} ~|~  e;e ~|~ \lookup{e}{e} ~|~ \store{e}{e}{e} \\
-& | & \delete{e}{e} ~|~ \newref{\ell}{e} ~|~ \deref{e} ~|~ \setref{e}{e} \\
-& | & \send{e}{e}{\rho} ~|~ \exercise{\rho}.
-\end{array}
-$\end{tiny}
-\item Memories: \begin{tiny}$\mu ::= \emptyset ~|~ \mu, \map{r_{\ell}}{\rho}{v}$\end{tiny}
-\item Handlers: \begin{tiny}$h ::= \emptyset ~|~ h,\handler{a}{x}{\rho}{e}{\rho'}$\end{tiny}
-\item Instances: \begin{tiny}$i ::= \emptyset ~|~ i,\inst{a}{e}{\rho}$\end{tiny}
-\item System: \begin{tiny}$s = \sys{\mu}{h}{i}$\end{tiny}
+\item Constants: $c ::= \mathit{num} ~|~ \mathit{str} ~|~ \mathit{bool} ~|~ \unit ~|~ \undef$
+\item Values: $v ::= n ~|~ x ~|~ c ~|~ r_{\ell} ~|~ \lam{x}{e} ~|~ \rec{\vec{str_i:v_i}}$
+\item Expressions: classical lambda calculus construct, operations on objects and on references, $e ::= \dots |~ \newref{\ell}{e} ~|~ \send{e}{e}{\rho} ~|~ \exercise{\rho}.$
+\item Memories: $\mu ::= \emptyset ~|~ \mu, \map{r_{\ell}}{\rho}{v}$
+\item Handlers: $h ::= \emptyset ~|~ h,\handler{a}{x}{\rho}{e}{\rho'}$
+\item Instances: $i ::= \emptyset ~|~ i,\inst{a}{e}{\rho}$
+\item System: $s = \sys{\mu}{h}{i}$
 \end{itemize}
 \end{frame}
 
 \begin{frame}{Judgments}
-For the analysis we used Flow logic \cite{FlowLogic}
+For the analysis we used the Flow logic \cite{FlowLogic} approach.
+\begin{itemize}
+\item All values are abstracted assuming a pre-order relation $\sqsubseteq$. $v \rightsquigarrow \hat{v}$
+\item Abstract environment $\absC=\abstack ; \absnet ; \absenv ; \absmem$ is a four-tuple made of the following components:
+$$
+\begin{array}{llcl}
+\mathit{Abstract\ variable\ environment} & \absenv & : & \vars \cup \absfuns \rightarrow \absvalues \\
+\mathit{Abstract\ memory} & \absmem & : & \labs \times \perms \rightarrow \absvalues \\
+\mathit{Abstract\ stack} & \abstack & : & \names \times \perms \rightarrow \perms \times \perms \\
+\mathit{Abstract\ network} & \absnet & : & \names \times \perms \rightarrow \absvalues.
+\end{array}
+$$
+\end{itemize}
+We do not fix any specific representation of the domains.
+\end{frame}
+
+\begin{frame}
+Each judgment of our specification has the form: 
+\begin{itemize}
+\item $\absC \Vdash_\rho v \rightsquigarrow \hat{v}$
+\item $\absC  \Vdash_\rho e: \hat{v} \escalate{\rho'}$
+\item $\absC \Vdash \mu \despite{\rho}$, $\absC \Vdash h \despite{\rho}$, 
+$\absC \Vdash i \despite{\rho}$, $\absC \Vdash s \despite{\rho}$.
+\end{itemize}
+
+Example:
+
+$$\inferrule*[width=10em,lab=(PE-Cond)]
+{\absC \Vdash_{\rho_s} e_0: \hat{v}_0 \escalate{\rho_0} \sqsubseteq \rho \\
+\abstrue \in \hat{v}_0 \Rightarrow \absC \Vdash_{\rho_s} e_1: \hat{v}_1 \sqsubseteq \hat{v} \escalate{\rho_1} \sqsubseteq \rho \\
+\absfalse \in \hat{v}_0 \Rightarrow \absC \Vdash_{\rho_s} e_2: \hat{v}_2 \sqsubseteq \hat{v} \escalate{\rho_2} \sqsubseteq \rho}
+{\absC \Vdash_{\rho_s} \cond{e_0}{e_1}{e_2}: \hat{v} \escalate{\rho}}$$
 \end{frame}
 
 \begin{frame}{Theorem}
-Let $s = \mu;h;\emptyset$. If $\absC \Vdash s \despite \rho$, then $s$ is $\permsleak{\rho}(\absC)$-safe despite $\rho$.
+\begin{itemize}
+\item[] Permission leak against $\rho: \; \permsleak{\rho}(\absC)$ is a sound over-approximation of the permissions which can be escalated by the opponent $\rho$ in an initial system with arbitrary long call chains.
+\item[] The main point of the analysis is this theorem:
+\item[] Let $s = \mu;h;\emptyset$. If $\absC \Vdash s \despite \rho$, then $s$ is $\rho'$-safe despite $\rho$ for $\rho' = \permsleak{\rho}(\absC)$. 
+\item[] This gives us statically an over-approximation of all permissions that an opponent can escalate to on a given extension. 
+\end{itemize}
 \end{frame}
 
-\subsection{Implementation}
+%%\subsection{Implementation}
+
+\begin{frame}{Implementation steps}
+The analysis is implemented in a tool.
+\begin{enumerate}
+\item The analysis is turned in a Verbose approach (it saves all expressions values in a Cache),
+\item The analysis of a program is turned in a finite set of constraints,
+\item Is computed an acceptable solution starting from the set of constraints,
+\end{enumerate}
+The translation from the Succinct approach to the Verbose one is made:
+\begin{enumerate}
+\item adding unambiguous labels $\alpha \in A$ to each expression: $e \Rightarrow e^\alpha$;
+\item adding a Cache to the environment that stores all the partial result of each expression: 
+$$\mathit{Abstract\ cache} \quad \Cat : \labs \rightarrow \absvalues$$.
+\end{enumerate}  
+\end{frame}
 
 \begin{frame}{Tool}
 We developed a tool in F\# to perform the analysis described below. We:
@@ -288,23 +322,26 @@ We developed a tool in F\# to perform the analysis described below. We:
 \end{frame}
 
 \begin{frame}{Constraint generation}
-
+output
 \end{frame}
 
 \begin{frame}{Worklist algorithm}
-
+output
 \end{frame}
 
 \begin{frame}{Abstract domains}
-
-\end{frame}
-
-\section{Conclusion}
-\begin{frame}{Results}
-
+base
 \end{frame}
 
 \begin{frame}{Performance}
+generate and solve preciso
+generate and solve sfigato
+generate and solve tricky
+generate and solve lazy
+\end{frame}
+
+%\section{Conclusion}
+\begin{frame}{Results}
 
 \end{frame}
 
@@ -316,7 +353,7 @@ a bunch of JavaScript code !_*(){}[]
 adsad3
 \end{frame}
 
-\subsection{Future works}
+%\subsection{Future works}
 \begin{frame}{Future works}
 \begin{itemize}
 \item Automatic correction of bundled extensions in order to debundle itself preserving its functionality
