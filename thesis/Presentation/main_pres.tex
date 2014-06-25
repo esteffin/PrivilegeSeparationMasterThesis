@@ -11,6 +11,8 @@
 \usepackage{todonotes}
 \usepackage{lmodern}
 \usepackage{infer}
+\usepackage{tabularx}
+\usepackage{multirow}
 
 \author{Enrico Steffinlongo}
 \title{Privilege separation in browser architectures}
@@ -52,18 +54,18 @@
 %\listoftodos
 %\end{frame}
 
-\begin{frame}
-\tableofcontents
-\end{frame}
+%\begin{frame}
+%\tableofcontents
+%\end{frame}
 
 %\section{Intro}
 %%\subsection{Browser extensions}
 \begin{frame}{Browser Extensions}
 Web browsers extensions are phenomenally popular.
 \begin{itemize}
-\item roughly 33\% of Firefox users have at least one add-on
+\item roughly 30\% of Firefox users have at least one add-on
 \end{itemize}
-Extension customize the user experience
+Extensions customize the user experience of the browser
 \begin{itemize}
 \item Customize the user interface
 \item Adds lots of functionality to the browser (e.g., save and restore tabs)
@@ -72,10 +74,9 @@ Extension customize the user experience
 \end{frame}
 
 \begin{frame}{Browser Extensions}
-Extension need to interact with
+Extensions need to interact with
 \begin{itemize}
 \item Web pages DOM
-\item Browser internal structure (tabs collections, \dots)
 \item Browser API (browser storage, cookie jar, \dots)
 \end{itemize}
 Potential security problem!
@@ -90,7 +91,7 @@ Potential security problem!
 \begin{frame}{Chrome extensions architecture}
 \begin{columns}[T]
 \begin{column}{.48\textwidth}
-Chrome extension architecture force developers to three practices
+Chrome extension architecture forces developers to adopt three practices
 \begin{enumerate}
 \item Privilege separation
 \item Least privilege
@@ -107,30 +108,30 @@ Chrome extension architecture force developers to three practices
 \begin{itemize}
 \item Content scripts
 \begin{itemize}
-\item Injected to each page (multiple instances)
+\item Are injected to each page (multiple instances)
 \item Access the DOM of the page
 \item Cannot use privileges other than the one used to send messages to the Extension Core
 \end{itemize}
 \item Extension Core
 \begin{itemize}
-\item Single instance for each browser session
-\item No access to DOM of pages
+\item Has a single instance for each browser session
+\item Has no access to DOM of pages
 \item Can use privileges defined statically in the manifest
 \end{itemize}
 \end{itemize}
 \end{frame}
 
 \begin{frame}{Least privilege}
-An extension has a limited set of permission defined statically in the manifest
+An extension has a limited set of permissions defined statically in the manifest
 \begin{itemize}
 \item An extension cannot use more than required permissions
-\item User have to agree with the required permission at install time
+\item Users have to agree with the required permissions at install time
 \item Attacker cannot use more than such set of privileges
 \end{itemize}
 \end{frame}
 
 \begin{frame}{Strong isolation}
-All components of the extension have different address spaces except content scripts that can read and modify the DOM of the page on which are injected. So an infected component could not
+All components of the extension have different address spaces except content scripts that can read and modify the DOM of the page on which are injected. So an infected component cannot
 \begin{itemize}
 \item alter content of variables of other components
 \item invoke or alter functions defined in other components.
@@ -138,8 +139,7 @@ All components of the extension have different address spaces except content scr
 
 Communication between Extension Core and Content Scripts is only via message passing:
 \begin{itemize}
-\item Messages exchanged can only be string (Objects are marshaled using a JSON serializer)
-\item Functions cannot be sent.
+\item Messages exchanged can only be strings (Objects are marshaled using a JSON serializer)
 \end{itemize}
 \end{frame}
 
@@ -162,18 +162,38 @@ Communication between Extension Core and Content Scripts is only via message pas
 %\end{columns}
 %\end{frame}
 
-\begin{frame}{Message passing}
-\todo[inline]{to be fixed MPI}
-Chrome extension message passing API
-\end{frame}
-
 \begin{frame}[fragile]{Example}
-\todo[inline]{to be fixed Example}
 \begin{columns}[T]
 \begin{column}{.48\textwidth}
-
+Content script 1:
+\begin{tiny}
+\begin{lstlisting}
+chrome.runtime.sendMessage(
+    {tag: "req", site: "www.google.com"});
+\end{lstlisting}
+\end{tiny}
+Content script 2:
+\begin{tiny}
+\begin{lstlisting}
+chrome.runtime.sendMessage(
+    {tag: "sync", 
+    site: "www.password1.com"});
+\end{lstlisting}
+\end{tiny}
+Attacker:
+\begin{tiny}
+\begin{lstlisting}
+chrome.runtime.sendMessage(...);
+chrome.runtime.sendMessage(
+    {tag: "req", site: "www.google.com"});
+chrome.runtime.sendMessage(
+    {tag: "sync", site: "www.evil.com"});
+\end{lstlisting}
+\end{tiny}
 \end{column}
+\vrule{}
 \begin{column}{.48\textwidth}
+Extension Core:
 \begin{tiny}
 \begin{lstlisting}
 chrome.runtime.onMessage.addListener(
@@ -190,7 +210,7 @@ chrome.runtime.onMessage.addListener(
     }
     else
       console.log ("Invalid message");
-});
+  });
 \end{lstlisting}
 \end{tiny}
 \end{column}
@@ -207,7 +227,7 @@ JavaScript:
 \item Lots of constructs
 \item unconventional semantics.
 \end{itemize}
-Very complex to analyze!!
+Very complex to analyze!
 \end{column}
 \begin{column}{.50\textwidth}
 \includegraphics[scale=0.42]{Images/LambdaJS.PNG}
@@ -221,11 +241,11 @@ Very complex to analyze!!
 \item Not a sound approximation of JavaScript
 \item Tests on ``desugared'' files shows that its the semantic coincide with JavaScript
 \end{itemize}
-Easy to analyze
+Easy to analyze!
 \end{frame}
 
 \begin{frame}{The calculus}
-\ljs++ is an extension of \ljs\ with constructs specific for communications of components in privilege-separated architectures. Its components are:
+\ljs++ is an extension of \ljs. It adds specific constructs for communications in privilege-separated architectures. Its components are:
 
 \begin{itemize}
 \item Constants: $c ::= \mathit{num} ~|~ \mathit{str} ~|~ \mathit{bool} ~|~ \unit ~|~ \undef$
@@ -241,21 +261,19 @@ Easy to analyze
 \begin{frame}{Judgments}
 For the analysis we used the Flow logic \cite{FlowLogic} approach.
 \begin{itemize}
-\item All values are abstracted assuming a pre-order relation $\sqsubseteq$. $v \rightsquigarrow \hat{v}$
-\item Abstract environment $\absC=\abstack ; \absnet ; \absenv ; \absmem$ is a four-tuple made of the following components:
-$$
-\begin{array}{llcl}
-\mathit{Abstract\ variable\ environment} & \absenv & : & \vars \cup \absfuns \rightarrow \absvalues \\
-\mathit{Abstract\ memory} & \absmem & : & \labs \times \perms \rightarrow \absvalues \\
-\mathit{Abstract\ stack} & \abstack & : & \names \times \perms \rightarrow \perms \times \perms \\
-\mathit{Abstract\ network} & \absnet & : & \names \times \perms \rightarrow \absvalues.
-\end{array}
-$$
+\item All values are abstracted assuming a pre-order relation $\sqsubseteq$.
+\item We do not fix any specific representation of the abstract domains
+\item Abstract environment $\absC=\absenv ; \absmem ; \abstack ; \absnet$
+% is a four-tuple made of the following components:
+%$$
+%\begin{array}{llcl}
+%\mathit{Abstract\ variable\ environment} & \absenv & : & \vars \cup \absfuns \rightarrow \absvalues \\
+%\mathit{Abstract\ memory} & \absmem & : & \labs \times \perms \rightarrow \absvalues \\
+%\mathit{Abstract\ stack} & \abstack & : & \names \times \perms \rightarrow \perms \times \perms \\
+%\mathit{Abstract\ network} & \absnet & : & \names \times \perms \rightarrow \absvalues.
+%\end{array}
+%$$
 \end{itemize}
-We do not fix any specific representation of the domains.
-\end{frame}
-
-\begin{frame}
 Each judgment of our specification has the form: 
 \begin{itemize}
 \item $\absC \Vdash_\rho v \rightsquigarrow \hat{v}$
@@ -263,9 +281,9 @@ Each judgment of our specification has the form:
 \item $\absC \Vdash \mu \despite{\rho}$, $\absC \Vdash h \despite{\rho}$, 
 $\absC \Vdash i \despite{\rho}$, $\absC \Vdash s \despite{\rho}$.
 \end{itemize}
+\end{frame}
 
-Example:
-
+\begin{frame}{Judgment example}
 $$\inferrule*[width=10em,lab=(PE-Cond)]
 {\absC \Vdash_{\rho_s} e_0: \hat{v}_0 \escalate{\rho_0} \sqsubseteq \rho \\
 \abstrue \in \hat{v}_0 \Rightarrow \absC \Vdash_{\rho_s} e_1: \hat{v}_1 \sqsubseteq \hat{v} \escalate{\rho_1} \sqsubseteq \rho \\
@@ -277,87 +295,188 @@ $$\inferrule*[width=10em,lab=(PE-Cond)]
 \begin{itemize}
 \item[] Permission leak against $\rho: \; \permsleak{\rho}(\absC)$ is a sound over-approximation of the permissions which can be escalated by the opponent $\rho$ in an initial system with arbitrary long call chains.
 \item[] The main point of the analysis is this theorem:
-\item[] Let $s = \mu;h;\emptyset$. If $\absC \Vdash s \despite \rho$, then $s$ is $\rho'$-safe despite $\rho$ for $\rho' = \permsleak{\rho}(\absC)$. 
-\item[] This gives us statically an over-approximation of all permissions that an opponent can escalate to on a given extension. 
+\item[]
+\begin{center}
+\begin{tabular}{|l|}
+\hline
+Let $s = \mu;h;\emptyset$.\\If $\absC \Vdash s \despite \rho$,then\\$s$ is $\rho'$-safe despite $\rho$ for $\rho' = \permsleak{\rho}(\absC)$. \\
+\hline
+\end{tabular}
+\end{center}
+\item[] This gives us statically an over-approximation of all permissions that an opponent can escalate to if it attacks an extension. 
 \end{itemize}
 \end{frame}
 
 %%\subsection{Implementation}
 
 \begin{frame}{Implementation steps}
-The analysis is implemented in a tool.
 \begin{enumerate}
 \item The analysis is turned in a Verbose approach (it saves all expressions values in a Cache),
 \item The analysis of a program is turned in a finite set of constraints,
-\item Is computed an acceptable solution starting from the set of constraints,
+\item Starting from the set of constraints an acceptable solution is computed.
 \end{enumerate}
-The translation from the Succinct approach to the Verbose one is made:
-\begin{enumerate}
-\item adding unambiguous labels $\alpha \in A$ to each expression: $e \Rightarrow e^\alpha$;
-\item adding a Cache to the environment that stores all the partial result of each expression: 
-$$\mathit{Abstract\ cache} \quad \Cat : \labs \rightarrow \absvalues$$.
-\end{enumerate}  
 \end{frame}
 
 \begin{frame}{Tool}
-We developed a tool in F\# to perform the analysis described below. We:
+We developed a tool written in F\# to perform the analysis. In the analysis we:
 \begin{enumerate}
 \item add the chrome API definition as prelude to each source
 \item desugar the source with prelude using the desugaring tool \cite{LambdaJS}
-\item parse the desugared file using a YACC lexer/parser
-\item alpha-rename all variables to avoid clashing since the analysis is context-insensitive
-\item add unambiguous labels $\alpha$ on nodes in the AST ($e \Rightarrow e^\alpha$)
+\item parse the desugared file using lex/yacc
+%\item alpha-rename all variables to avoid clashing since the analysis is context-insensitive
+%\item add unambiguous labels $\alpha$ on nodes in the AST ($e \Rightarrow e^\alpha$)
 \item generate the constraints for the AST
-\item solve the constraints using a worklist algorithm
-\item interpret the solution.
+\item solve the constraints using a worklist algorithm.
+\end{enumerate}
+To increase precision of the analysis we also alpha-rename variables to avoid clashing since the analysis is context-insensitive.
+\end{frame}
+\newcommand{\absCV}{\mathcal{CV}}
+\newcommand{\cenvs}{\absCV}
+\newcommand{\Cat}[0]{\absCV_{\hat{C}}}
+\newcommand{\muat}[0]{\absCV_{\hat{\mu}}}
+\newcommand{\Env}[0]{\absCV_{\hat{\Gamma}}}
+\newcommand{\Pat}[0]{\absCV_{\hat{P}}}
+\newcommand{\Phiat}[0]{\absCV_{\hat{\Phi}}}
+\newcommand{\Upsat}[0]{\absCV_{\hat{\Upsilon}}}
+\newcommand{\ccest}[1]{\cenvs \Vdash_{cv, \rho_s} #1}
+\newcommand{\ccestl}[1]{\cenvs \Vdash_{cv, \rho_s} {(#1)}^{\alpha}}
+\newcommand{\lbt}[1]{{e_#1}^{\alpha_#1}}
+\newcommand{\all}{\alpha}
+
+%\begin{frame}{Compositional verbose}
+%
+%\begin{tiny}
+%Example (if statement)
+%\begin{tabular}{l l}%
+%[\textit{CV-Cond}]&$\ccestl{\cond {\lbt 0} {\lbt 1} {\lbt 2}} $ iff\\
+%&$\quad \ccest {\lbt 0} \wedge $\\
+%&$\quad \Pat(\all_{0}) \sqsubseteq \Pat(\all) \wedge$ \\
+%&$\quad \widehat{\true} \in \Cat(\all_0) \Rightarrow$\\
+%&$\qquad\ccest {\lbt 1} \wedge \Cat(\all_1) \sqsubseteq \Cat(\all)\wedge$\\
+%&$\qquad\Pat(\all_1) \sqsubseteq \Pat(\all) \wedge$ \\
+%&$\quad \widehat{\false} \in \Cat(\all_0) \Rightarrow$\\
+%&$\qquad\ccest {\lbt 2} \wedge \Cat(\all_2) \sqsubseteq \Cat(\all) \wedge$\\
+%&$\qquad\Pat(\all_2) \sqsubseteq \Pat(\all)$ \\
+%\end{tabular}
+%\end{tiny}
+%\end{frame}
+\newcommand{\genl}[1]{\mathcal{C}_{*\rho_s}\llbracket (#1)^\all \rrbracket}
+\newcommand{\gen}[1]{\mathcal{C}_{*\rho_s}\llbracket (#1) \rrbracket}
+\newcommand{\Cel}{\mathsf{C}}
+\newcommand{\Rel}{\mathsf{\Gamma}}
+\newcommand{\Pel}{\mathsf{P}}
+\newcommand{\Mel}{\mathsf{M}}
+\newcommand{\El}{\mathsf{E}}
+\newcommand{\Upsel}{\mathsf{\Upsilon}}
+\newcommand{\Phiel}{\mathsf{\Phi}}
+\newcommand{\braces}[1]{\{ #1 \} }
+\newcommand{\parens}[1]{\( #1 \) }
+
+\begin{frame}{Compositional Verbose}
+The translation from the Succinct approach to the Verbose one is made adding:
+\begin{enumerate}
+\item unambiguous labels $\alpha \in A$ to each expression: $e \Rightarrow e^\alpha$;
+\item a Cache to the environment that stores all the partial results of each expression: $\mathit{Abstract\ cache} \quad \hat{C} : A \rightarrow \hat{V}$;
+\item a Permission Cache to the environment that stores permissions used by each expression: $\mathit{Abstract\ permission} \quad \hat{P} : A \rightarrow \rho$.
 \end{enumerate}
 \end{frame}
 
-\begin{frame}{Compositional verbose}
-
-\end{frame}
-
 \begin{frame}{Constraint definition}
-
+Constraints have this form:
+\[
+\begin{array}{lcrcll}
+c & ::= &\{\vat\} & \sqsubseteq & \El & \mathit{Term\ inclusion}\\
+& | & \El & \sqsubseteq & \El & \mathit{Element\ inclusion} \\
+& | & \widehat{Op}(\vec{\El_i}) & \sqsubseteq & \El & \mathit{Operation\ inclusion}\\
+& | & c & \Rightarrow & c & \mathit{Implication}\\
+\end{array}
+\]
+\begin{itemize}
+\item[] Where $\El$ is an index of the environment (e.g., $\Rel(x)$).
+\item[] Constraints are generated from the program, and when they are created, they can be solved without the AST.
+\item[] Example: $\{\true\}\sqsubseteq \Cel(\all)$ means that $\true$ is in the possible estimate of the node marked with $\all$;
+\end{itemize}
 \end{frame}
 
-\begin{frame}{Constraint generation}
-output
+%\begin{frame}{Constraint generation}
+%output
+%\end{frame}
+
+\begin{frame}{Abstract domains}
+As abstract domains for pre-values we used:
+\begin{itemize}
+\item Signs $\oplus, \ominus, 0$ for numbers,
+\item Prefix for strings as described in \cite{StringAbstraction},
+\item Mapping from abstract strings to abstract values,
+\item All finite domains are abstracted in themselves.
+\end{itemize}
+An abstract value is a set of abstract pre-value.
 \end{frame}
 
 \begin{frame}{Worklist algorithm}
-output
-\end{frame}
+Constraints can be solved together with the abstract domains definition using an existing fix-point constraint solver such as:
+\begin{itemize}
+\item ALFP succinct solver\cite{SuccinctSolver};
+\item BANE constraint solver (from Berkeley university);
+\item Z3 solver (from Microsoft research)
+\item worklist algorithm described in Principle of Programming Analysis \cite{PrincipleProgramAnalysis}.
+\end{itemize}
 
-\begin{frame}{Abstract domains}
-base
+We decided to use a custom implementation of the worklist algorithm.
 \end{frame}
 
 \begin{frame}{Performance}
-generate and solve preciso
-generate and solve sfigato
-generate and solve tricky
-generate and solve lazy
+We developed various version of the worklist algorithm in order to increase the performances. We used
+\begin{itemize}
+\item a generalized version of the simple worklist algorithm,
+\item a more sophisticate implementation of the constraint generator that joins the implication constraint with same precondition,
+\item an optimized version of both constraints generator and solver based on lazy constraint generation.
+\end{itemize}
+
+Benchmarks:
+\begin{center}
+\begin{tabular}{|l|c|c|c|}
+\hline
+Number of nodes & Base & Optimized & Lazy\\
+\hline
+6268 & 8646.43 s & 4171.89 s & 0.94 s\\
+\hline
+9111 & 12974.89 s & 6050.89 s & 6.98 s\\
+\hline
+13075 & 29944.29 s & 20334.26 s & 12.21 s\\
+\hline
+20134 & 160845.38 s & 29206.74 s & 136.35 s\\
+\hline
+\end{tabular}
+\end{center}
+
+%generate and solve preciso
+%generate and solve sfigato
+%generate and solve tricky
+%generate and solve lazy
 \end{frame}
 
 %\section{Conclusion}
-\begin{frame}{Results}
+\begin{frame}{Conclusion}
+In this work we developed:
+\begin{itemize}
+\item an analysis of a Chrome extension,
+\item a tool for checking real extensions.
+\end{itemize}
 
-\end{frame}
-
-
-\begin{frame}[fragile]{Fst}
-\begin{lstlisting}
-a bunch of JavaScript code !_*(){}[]
-\end{lstlisting}
-adsad3
+The tool:
+\begin{enumerate}
+\item takes a real chrome extension,
+\item analyzes it,
+\item gives a static sound approximation of permissions that an opponent can escalate to.
+\end{enumerate}
 \end{frame}
 
 %\subsection{Future works}
 \begin{frame}{Future works}
 \begin{itemize}
-\item Automatic correction of bundled extensions in order to debundle itself preserving its functionality
-\item Generalization of the analysis in order to check other similar architectures (e.g., Firefox)
+\item Automatic correction of bundled extensions in order to debundle themselves preserving their functionality.
+\item Generalization of the analysis in order to check other similar architectures (e.g., Firefox).
 \end{itemize}
 \end{frame}
 
