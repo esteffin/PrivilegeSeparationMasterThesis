@@ -1,3 +1,0 @@
-
-Low priority
-Add exception to abstract values
